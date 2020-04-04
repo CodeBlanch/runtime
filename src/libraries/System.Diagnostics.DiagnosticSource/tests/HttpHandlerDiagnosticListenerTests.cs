@@ -4,6 +4,7 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -108,8 +109,10 @@ namespace System.Diagnostics.Tests
         /// Test to make sure we get both request and response events.
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestBasicReceiveAndResponseEvents()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestBasicReceiveAndResponseEvents(string method)
         {
             using (var eventRecords = new EventObserverAndRecorder(e =>
             {
@@ -122,7 +125,9 @@ namespace System.Diagnostics.Tests
                 // Send a random Http request to generate some events
                 using (var client = new HttpClient())
                 {
-                    (await client.GetAsync(Configuration.Http.RemoteEchoServer)).Dispose();
+                    (method == "GET"
+                        ? await client.GetAsync(Configuration.Http.RemoteEchoServer)
+                        : await client.PostAsync(Configuration.Http.RemoteEchoServer, new StringContent("hello world"))).Dispose();
                 }
 
                 // We should have exactly one Start and one Stop event
@@ -146,8 +151,16 @@ namespace System.Diagnostics.Tests
         }
 
         [OuterLoop]
-        [Fact]
-        public void TestBasicReceiveAndResponseWebRequestSyncEvents()
+        [Theory]
+        [InlineData("GET", 0)]
+        [InlineData("GET", 1)]
+        [InlineData("GET", 2)]
+        [InlineData("GET", 3)]
+        [InlineData("POST", 0)]
+        [InlineData("POST", 1)]
+        [InlineData("POST", 2)]
+        [InlineData("POST", 3)]
+        public async Task TestBasicReceiveAndResponseWebRequestSyncEvents(string method, int mode)
         {
             using (var eventRecords = new EventObserverAndRecorder(e =>
             {
@@ -161,151 +174,114 @@ namespace System.Diagnostics.Tests
                     // Send a random Http request to generate some events
                     var webRequest = (HttpWebRequest)WebRequest.Create(Configuration.Http.RemoteEchoServer);
 
-                    webRequest.GetResponse().Dispose();
-                }
-
-                // We should have exactly one Start and one Stop event
-                Assert.Equal(2, eventRecords.Records.Count);
-                Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Start")));
-                Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Stop")));
-
-                // Check to make sure: The first record must be a request, the next record must be a response.
-                HttpWebRequest startRequest = AssertFirstEventWasStart(eventRecords);
-
-                VerifyHeaders(startRequest);
-
-                KeyValuePair<string, object> stopEvent;
-                Assert.True(eventRecords.Records.TryDequeue(out stopEvent));
-                Assert.Equal("System.Net.Http.Desktop.HttpRequestOut.Stop", stopEvent.Key);
-                HttpWebRequest stopRequest = ReadPublicProperty<HttpWebRequest>(stopEvent.Value, "Request");
-                Assert.Equal(startRequest, stopRequest);
-                HttpWebResponse response = ReadPublicProperty<HttpWebResponse>(stopEvent.Value, "Response");
-                Assert.NotNull(response);
-            }
-        }
-
-        [OuterLoop]
-        [Fact]
-        public void TestBasicReceiveAndResponseWebRequestAsyncResultEvents()
-        {
-            using EventWaitHandle CallbackHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
-
-            HttpStatusCode? responseStatusCode = null;
-
-            using (var eventRecords = new EventObserverAndRecorder(e =>
-            {
-                if (e.Key.EndsWith("Stop"))
-                {
-                    // Make sure response instance does not get disposed while we're working on it.
-                    Thread.Sleep(TimeSpan.FromSeconds(5));
-                    HttpWebResponse response = ReadPublicProperty<HttpWebResponse>(e.Value, "Response");
-                    Assert.NotNull(response);
-                    try
+                    if (method == "POST")
                     {
-                        responseStatusCode = response.StatusCode;
-                    }
-                    catch
-                    {
-                    }
-                    CallbackHandle.Set();
-                }
-            }))
-            {
-                {
-                    // Send a random Http request to generate some events
-                    var webRequest = (HttpWebRequest)WebRequest.Create(Configuration.Http.RemoteEchoServer);
+                        webRequest.Method = method;
 
-                    var asyncResult = webRequest.BeginGetResponse(null, null);
-
-                    webRequest.EndGetResponse(asyncResult).Dispose();
-                }
-
-                CallbackHandle.WaitOne(TimeSpan.FromSeconds(10)); // Give the callback time to complete.
-
-                Assert.True(responseStatusCode.HasValue);
-                Assert.Equal(HttpStatusCode.OK, responseStatusCode);
-
-                // We should have exactly one Start and one Stop event
-                Assert.Equal(2, eventRecords.Records.Count);
-                Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Start")));
-                Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Stop")));
-
-                // Check to make sure: The first record must be a request, the next record must be a response.
-                HttpWebRequest startRequest = AssertFirstEventWasStart(eventRecords);
-
-                VerifyHeaders(startRequest);
-
-                KeyValuePair<string, object> stopEvent;
-                Assert.True(eventRecords.Records.TryDequeue(out stopEvent));
-                Assert.Equal("System.Net.Http.Desktop.HttpRequestOut.Stop", stopEvent.Key);
-                HttpWebRequest stopRequest = ReadPublicProperty<HttpWebRequest>(stopEvent.Value, "Request");
-                Assert.Equal(startRequest, stopRequest);
-                HttpWebResponse response = ReadPublicProperty<HttpWebResponse>(stopEvent.Value, "Response");
-                Assert.NotNull(response);
-            }
-        }
-
-        [OuterLoop]
-        [Fact]
-        public void TestBasicReceiveAndResponseWebRequestAsyncResultWithCallbackEvents()
-        {
-            using (var eventRecords = new EventObserverAndRecorder(e =>
-            {
-                // Verify header is available when start event is fired.
-                HttpWebRequest startRequest = ReadPublicProperty<HttpWebRequest>(e.Value, "Request");
-                Assert.NotNull(startRequest);
-                VerifyHeaders(startRequest);
-            }))
-            {
-                bool callbackCalled = false;
-
-                using EventWaitHandle CallbackHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
-
-                {
-                    // Send a random Http request to generate some events
-                    var webRequest = (HttpWebRequest)WebRequest.Create(Configuration.Http.RemoteEchoServer);
-
-                    int state = 18;
-                    var asyncResult = webRequest.BeginGetResponse(
-                        ar =>
+                        Stream stream = null;
+                        switch (mode)
                         {
-                            callbackCalled = true;
-                            Assert.Equal(state, (int)ar.AsyncState);
-                            CallbackHandle.Set();
-                        },
-                        state);
+                            case 0:
+                                stream = webRequest.GetRequestStream();
+                                break;
+                            case 1:
+                                stream = await webRequest.GetRequestStreamAsync();
+                                break;
+                            case 2:
+                                {
+                                    object state = new object();
+                                    using EventWaitHandle handle = new EventWaitHandle(false, EventResetMode.ManualReset);
+                                    IAsyncResult asyncResult = webRequest.BeginGetRequestStream(ar =>
+                                    {
+                                        Assert.Equal(state, ar.AsyncState);
+                                        handle.Set();
+                                    },
+                                    state);
+                                    stream = webRequest.EndGetRequestStream(asyncResult);
+                                    if (!handle.WaitOne(TimeSpan.FromSeconds(30)))
+                                        throw new InvalidOperationException();
+                                    handle.Dispose();
+                                }
+                                break;
+                            case 3:
+                                {
+                                    using EventWaitHandle handle = new EventWaitHandle(false, EventResetMode.ManualReset);
+                                    object state = new object();
+                                    webRequest.BeginGetRequestStream(ar =>
+                                    {
+                                        stream = webRequest.EndGetRequestStream(ar);
+                                        Assert.Equal(state, ar.AsyncState);
+                                        handle.Set();
+                                    },
+                                    state);
+                                    if (!handle.WaitOne(TimeSpan.FromSeconds(30)))
+                                        throw new InvalidOperationException();
+                                    handle.Dispose();
+                                }
+                                break;
+                            default:
+                                throw new NotSupportedException();
+                        }
 
-                    webRequest.EndGetResponse(asyncResult).Dispose();
-                }
+                        Assert.NotNull(stream);
 
-                CallbackHandle.WaitOne(TimeSpan.FromSeconds(10)); // Callback fires on its own thread, give it a chance to execute.
+                        using (StreamWriter writer = new StreamWriter(stream))
+                        {
+                            writer.WriteLine("hello world");
+                        }
+                    }
 
-                Assert.True(callbackCalled);
+                    WebResponse webResponse = null;
+                    switch (mode)
+                    {
+                        case 0:
+                            webResponse = webRequest.GetResponse();
+                            break;
+                        case 1:
+                            webResponse = await webRequest.GetResponseAsync();
+                            break;
+                        case 2:
+                            {
+                                object state = new object();
+                                using EventWaitHandle handle = new EventWaitHandle(false, EventResetMode.ManualReset);
+                                IAsyncResult asyncResult = webRequest.BeginGetResponse(ar =>
+                                {
+                                    Assert.Equal(state, ar.AsyncState);
+                                    handle.Set();
+                                },
+                                state);
+                                webResponse = webRequest.EndGetResponse(asyncResult);
+                                if (!handle.WaitOne(TimeSpan.FromSeconds(30)))
+                                    throw new InvalidOperationException();
+                                handle.Dispose();
+                            }
+                            break;
+                        case 3:
+                            {
+                                using EventWaitHandle handle = new EventWaitHandle(false, EventResetMode.ManualReset);
+                                object state = new object();
+                                webRequest.BeginGetResponse(ar =>
+                                {
+                                    webResponse = webRequest.EndGetResponse(ar);
+                                    Assert.Equal(state, ar.AsyncState);
+                                    handle.Set();
+                                },
+                                state);
+                                if (!handle.WaitOne(TimeSpan.FromSeconds(30)))
+                                    throw new InvalidOperationException();
+                                handle.Dispose();
+                            }
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
 
-                // We should have exactly one Start and one Stop event
-                Assert.Equal(2, eventRecords.Records.Count);
-                Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Start")));
-                Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Stop")));
-            }
-        }
+                    Assert.NotNull(webResponse);
 
-        [OuterLoop]
-        [Fact]
-        public async Task TestBasicReceiveAndResponseWebRequestAsyncEvents()
-        {
-            using (var eventRecords = new EventObserverAndRecorder(e =>
-            {
-                // Verify header is available when start event is fired.
-                HttpWebRequest startRequest = ReadPublicProperty<HttpWebRequest>(e.Value, "Request");
-                Assert.NotNull(startRequest);
-                VerifyHeaders(startRequest);
-            }))
-            {
-                {
-                    // Send a random Http request to generate some events
-                    var webRequest = (HttpWebRequest)WebRequest.Create(Configuration.Http.RemoteEchoServer);
-
-                    (await webRequest.GetResponseAsync()).Dispose();
+                    using (StreamReader reader = new StreamReader(webResponse.GetResponseStream()))
+                    {
+                        reader.ReadToEnd(); // Make sure response is not disposed.
+                    }
                 }
 
                 // We should have exactly one Start and one Stop event
@@ -546,15 +522,19 @@ namespace System.Diagnostics.Tests
         /// Test to make sure we get both request and response events.
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestResponseWithoutContentEvents()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestResponseWithoutContentEvents(string method)
         {
             using (var eventRecords = new EventObserverAndRecorder())
             {
                 // Send a random Http request to generate some events
                 using (var client = new HttpClient())
                 {
-                    (await client.GetAsync(Configuration.Http.RemoteEmptyContentServer)).Dispose();
+                    using HttpResponseMessage response = method == "GET"
+                        ? await client.GetAsync(Configuration.Http.RemoteEmptyContentServer)
+                        : await client.PostAsync(Configuration.Http.RemoteEmptyContentServer, new StringContent("hello world"));
                 }
 
                 // We should have exactly one Start and one Stop event
@@ -580,8 +560,10 @@ namespace System.Diagnostics.Tests
         /// Test that if request is redirected, it gets only one Start and one Stop event
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestRedirectedRequest()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestRedirectedRequest(string method)
         {
             using (var eventRecords = new EventObserverAndRecorder())
             {
@@ -589,7 +571,10 @@ namespace System.Diagnostics.Tests
                 {
                     Uri uriWithRedirect =
                         Configuration.Http.RemoteSecureHttp11Server.RedirectUriForDestinationUri(302, Configuration.Http.RemoteEchoServer, 10);
-                    (await client.GetAsync(uriWithRedirect)).Dispose();
+
+                    using HttpResponseMessage response = method == "GET"
+                        ? await client.GetAsync(uriWithRedirect)
+                        : await client.PostAsync(uriWithRedirect, new StringContent("hello world"));
                 }
 
                 // We should have exactly one Start and one Stop event
@@ -603,14 +588,19 @@ namespace System.Diagnostics.Tests
         /// Test exception in request processing: exception should have expected type/status and now be swallowed by reflection hook
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestRequestWithException()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestRequestWithException(string method)
         {
             using (var eventRecords = new EventObserverAndRecorder())
             {
-                var ex =
-                    await Assert.ThrowsAsync<HttpRequestException>(
-                        () => new HttpClient().GetAsync($"http://{Guid.NewGuid()}.com"));
+                var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+                {
+                    return method == "GET"
+                        ? new HttpClient().GetAsync($"http://{Guid.NewGuid()}.com")
+                        : new HttpClient().PostAsync($"http://{Guid.NewGuid()}.com", new StringContent("hello world"));
+                });
 
                 // check that request failed because of the wrong domain name and not because of reflection
                 var webException = (WebException)ex.InnerException;
@@ -638,15 +628,22 @@ namespace System.Diagnostics.Tests
         /// Test request cancellation: reflection hook does not throw
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestCanceledRequest()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestCanceledRequest(string method)
         {
             CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             using (var eventRecords = new EventObserverAndRecorder(_ => { cts.Cancel(); }))
             {
                 using (var client = new HttpClient())
                 {
-                    var ex = await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync(Configuration.Http.RemoteEchoServer, cts.Token));
+                    var ex = await Assert.ThrowsAnyAsync<Exception>(() =>
+                    {
+                        return method == "GET"
+                            ? client.GetAsync(Configuration.Http.RemoteEchoServer, cts.Token)
+                            : client.PostAsync(Configuration.Http.RemoteEchoServer, new StringContent("hello world"), cts.Token);
+                    });
                     Assert.True(ex is TaskCanceledException || ex is WebException);
                 }
 
@@ -661,14 +658,21 @@ namespace System.Diagnostics.Tests
         /// Test request connection exception: reflection hook does not throw
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestSecureTransportFailureRequest()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestSecureTransportFailureRequest(string method)
         {
             using (var eventRecords = new EventObserverAndRecorder())
             {
                 using (var client = new HttpClient())
                 {
-                    var ex = await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync(Configuration.Http.ExpiredCertRemoteServer));
+                    var ex = await Assert.ThrowsAnyAsync<Exception>(() =>
+                    {
+                        return method == "GET"
+                            ? client.GetAsync(Configuration.Http.ExpiredCertRemoteServer)
+                            : client.PostAsync(Configuration.Http.ExpiredCertRemoteServer, new StringContent("hello world"));
+                    });
                     Assert.True(ex is HttpRequestException);
                 }
 
@@ -683,8 +687,10 @@ namespace System.Diagnostics.Tests
         /// Test request connection retry: reflection hook does not throw
         /// </summary>
         [OuterLoop]
-        [Fact]
-        public async Task TestSecureTransportRetryFailureRequest()
+        [Theory]
+        [InlineData("GET")]
+        [InlineData("POST")]
+        public async Task TestSecureTransportRetryFailureRequest(string method)
         {
             // This test sends an https request to an endpoint only set up for http.
             // It should retry. What we want to test for is 1 start, 1 exception event even
@@ -713,7 +719,13 @@ namespace System.Diagnostics.Tests
                 {
                     using (var client = new HttpClient())
                     {
-                        var ex = await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync("https://localhost:8018/dotnet/tests"));
+                        var ex = await Assert.ThrowsAnyAsync<Exception>(() =>
+                        {
+                            return method == "GET"
+                                ? client.GetAsync("https://localhost:8018/dotnet/tests")
+                                : client.PostAsync("https://localhost:8018/dotnet/tests", new StringContent("hello world"));
+
+                        });
                         Assert.True(ex is HttpRequestException);
                     }
 

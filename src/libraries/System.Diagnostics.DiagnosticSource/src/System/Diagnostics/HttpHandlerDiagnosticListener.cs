@@ -277,7 +277,7 @@ namespace System.Diagnostics
         /// </summary>
         private class ArrayListWrapper : ArrayList
         {
-            private readonly ArrayList _list;
+            private ArrayList _list;
 
             public override int Capacity
             {
@@ -472,6 +472,12 @@ namespace System.Diagnostics
             {
                 this._list.TrimToSize();
             }
+            public ArrayList Swap()
+            {
+                ArrayList old = _list;
+                _list = new ArrayList(old.Capacity);
+                return old;
+            }
         }
 
         /// <summary>
@@ -527,6 +533,26 @@ namespace System.Diagnostics
 
                 return index;
             }
+
+            public override void RemoveAt(int index)
+            {
+                HttpWebRequest request = base[index] as HttpWebRequest;
+
+                base.RemoveAt(index);
+
+                if (request != null)
+                    HookOrProcessResult(request);
+            }
+
+            public override void Clear()
+            {
+                ArrayList oldList = Swap();
+                for (int i = 0; i < oldList.Count; i++)
+                {
+                    if (oldList[i] is HttpWebRequest request)
+                        HookOrProcessResult(request);
+                }
+            }
         }
 
         #endregion
@@ -558,12 +584,18 @@ namespace System.Diagnostics
                 activity.Start();
 
                 object asyncContext = s_readAResultAccessor(request);
+                if (asyncContext != null)
+                {
+                    // Flow here is for [Begin]GetResponse[Async] without a prior call to [Begin]GetRequestStream[Async].
 
-                // Step 1: Hook request._ReadAResult.m_AsyncState to store the state (request + callback + state + activity) we will need later.
-                s_asyncStateModifier(asyncContext, new Tuple<HttpWebRequest, object, AsyncCallback, Activity>(request, s_asyncStateAccessor(asyncContext), s_asyncCallbackAccessor(asyncContext), activity));
+                    HookAsyncResultCallback(asyncContext, request, activity, s_readAsyncCallback);
+                }
+                else
+                {
+                    // Flow here is for [Begin]GetRequestStream[Async].
 
-                // Step 2: Hook request._ReadAResult.m_AsyncCallback so we can fire our events when the request is complete.
-                s_asyncCallbackModifier(asyncContext, s_asyncCallback);
+                    HookAsyncResultCallback(s_writeAResultAccessor(request), request, activity, s_writeAsyncCallback);
+                }
 
                 InstrumentRequest(request, activity);
 
@@ -647,18 +679,54 @@ namespace System.Diagnostics
             }
         }
 
-        private static void AsyncCallback(IAsyncResult asyncResult)
+        private static void HookOrProcessResult(HttpWebRequest request)
         {
-            // Retrieve the state we stuffed into m_AsyncState.
-            Tuple<HttpWebRequest, object, AsyncCallback, Activity> state = (Tuple<HttpWebRequest, object, AsyncCallback, Activity>)s_asyncStateAccessor(asyncResult);
+            object writeAsyncContext = s_writeAResultAccessor(request);
+            if (writeAsyncContext == null || !(s_asyncStateAccessor(writeAsyncContext) is Tuple<HttpWebRequest, object, AsyncCallback, Activity> writeAsyncState))
+            {
+                // If we already hooked into the read result during RaiseRequestEvent or we hooked up after the fact already we don't need to do anything here.
+                return;
+            }
 
-            AsyncCallback asyncCallback = state.Item3;
+            // If we got here it means the user called [Begin]GetRequestStream[Async] and we have to hook the read result after the fact.
+
+            object readAsyncContext = s_readAResultAccessor(request);
+            if (readAsyncContext == null)
+            {
+                // We're still trying to establish the connection (no read has started) or we are alrady hooked.
+                return;
+            }
+
+            // Clear our saved state so we know not to process again.
+            s_asyncStateModifier(writeAsyncContext, writeAsyncState.Item2);
+
+            if (s_endCalledAccessor.Invoke(readAsyncContext))
+            {
+                // We need to process the result directly because the read callback has already fired. Force a copy because response has likely already been disposed.
+                ProcessResult((IAsyncResult)readAsyncContext, writeAsyncState, null, s_resultAccessor(readAsyncContext), true);
+                return;
+            }
+
+            // Hook into the result callback if it hasn't already fired.
+            HookAsyncResultCallback(readAsyncContext, request, writeAsyncState.Item4, s_readAsyncCallback);
+        }
+
+        private static void HookAsyncResultCallback(object asyncContext, HttpWebRequest request, Activity activity, AsyncCallback asyncCallback)
+        {
+            // Step 1: Hook m_AsyncState to store the state (request + state + callback + activity) we will need later.
+            s_asyncStateModifier(asyncContext, new Tuple<HttpWebRequest, object, AsyncCallback, Activity>(request, s_asyncStateAccessor(asyncContext), s_asyncCallbackAccessor(asyncContext), activity));
+
+            // Step 2: Hook m_AsyncCallback so we can fire our events when the request is completed.
+            s_asyncCallbackModifier(asyncContext, asyncCallback);
+        }
+
+        private static void ProcessResult(IAsyncResult asyncResult, Tuple<HttpWebRequest, object, AsyncCallback, Activity> state, AsyncCallback asyncCallback, object result, bool forceResponseCopy)
+        {
+            // We could be executing on a different thread now so set the activity.
+            Activity.Current = state.Item4;
 
             try
             {
-                // Access the result of the request.
-                object result = s_resultAccessor(asyncResult);
-
                 if (result is Exception ex)
                 {
                     s_instance.RaiseExceptionEvent(state.Item1, ex);
@@ -667,14 +735,14 @@ namespace System.Diagnostics
                 {
                     HttpWebResponse response = (HttpWebResponse)result;
 
-                    if (asyncCallback == null && s_isContextAwareResultChecker(asyncResult))
+                    if (forceResponseCopy || (asyncCallback == null && s_isContextAwareResultChecker(asyncResult)))
                     {
                         // For async calls (where asyncResult is ContextAwareResult)...
                         // If no callback was set assume the user is manually calling BeginGetResponse & EndGetResponse
                         // in which case they could dispose the HttpWebResponse before our listeners have a chance to work with it.
                         // Disposed HttpWebResponse throws when accessing properties, so let's make a copy of the data to ensure that doesn't happen.
 
-                        using HttpWebResponse responseCopy = s_httpWebResponseCtor(
+                        HttpWebResponse responseCopy = s_httpWebResponseCtor(
                             new object[]
                             {
                                 s_uriAccessor(response), s_verbAccessor(response), s_coreResponseDataAccessor(response), s_mediaTypeAccessor(response),
@@ -694,14 +762,57 @@ namespace System.Diagnostics
             {
             }
 
-            // Activity.Current should be fine here because the AsyncCallback fires through ExecutionContext but it was easy enough to pass in and this will work even if context wasn't flowed, for some reason.
             state.Item4.Stop();
+        }
 
-            // Restore the state in case anyone downstream is reliant on it.
-            s_asyncStateModifier(asyncResult, state.Item2);
+        private static void ReadAsyncCallback(IAsyncResult asyncResult)
+        {
+            // Retrieve the state we stuffed into m_AsyncState.
+            Tuple<HttpWebRequest, object, AsyncCallback, Activity> state = (Tuple<HttpWebRequest, object, AsyncCallback, Activity>)s_asyncStateAccessor(asyncResult);
 
-            // Fire the user's callback, if it was set. No try/catch so calling HttpWebRequest can abort on failure.
-            asyncCallback?.Invoke(asyncResult);
+            AsyncCallback asyncCallback = state.Item3;
+
+            ProcessResult(asyncResult, state, asyncCallback, s_resultAccessor(asyncResult), false);
+
+            if (asyncCallback != null)
+            {
+                // Restore the state in case anyone downstream is reliant on it.
+                s_asyncStateModifier(asyncResult, state.Item2);
+
+                // Fire the user's callback, if it was set. No catch so calling HttpWebRequest can abort on failure.
+                asyncCallback.Invoke(asyncResult);
+            }
+        }
+
+        private static void WriteAsyncCallback(IAsyncResult asyncResult)
+        {
+            // Retrieve the state we stuffed into m_AsyncState.
+            Tuple<HttpWebRequest, object, AsyncCallback, Activity> state = (Tuple<HttpWebRequest, object, AsyncCallback, Activity>)s_asyncStateAccessor(asyncResult);
+
+            AsyncCallback asyncCallback = state.Item3;
+
+            object result = s_resultAccessor(asyncResult);
+            if (result is Exception)
+            {
+                ProcessResult(asyncResult, state, asyncCallback, result, false);
+            }
+
+            if (asyncCallback != null)
+            {
+                // Restore the state in case anyone downstream is reliant on it.
+                s_asyncStateModifier(asyncResult, state.Item2);
+
+                try
+                {
+                    // Fire the user's callback, if it was set. No catch so calling HttpWebRequest can abort on failure.
+                    asyncCallback.Invoke(asyncResult);
+                }
+                finally
+                {
+                    // Put our state back so we can read the activity when we process the result.
+                    s_asyncStateModifier(asyncResult, state);
+                }
+            }
         }
 
         private static void PrepareReflectionObjects()
@@ -716,6 +827,7 @@ namespace System.Diagnostics
             s_connectionType = systemNetHttpAssembly?.GetType("System.Net.Connection");
             s_writeListField = s_connectionType?.GetField("m_WriteList", BindingFlags.Instance | BindingFlags.NonPublic);
 
+            s_writeAResultAccessor = CreateFieldGetter<object>(typeof(HttpWebRequest), "_WriteAResult", BindingFlags.NonPublic | BindingFlags.Instance);
             s_readAResultAccessor = CreateFieldGetter<object>(typeof(HttpWebRequest), "_ReadAResult", BindingFlags.NonPublic | BindingFlags.Instance);
 
             // Double checking to make sure we have all the pieces initialized
@@ -724,6 +836,7 @@ namespace System.Diagnostics
                 s_connectionListField == null ||
                 s_connectionType == null ||
                 s_writeListField == null ||
+                s_writeAResultAccessor == null ||
                 s_readAResultAccessor == null ||
                 !PrepareAsyncResultReflectionObjects(systemNetHttpAssembly) ||
                 !PrepareHttpWebResponseReflectionObjects(systemNetHttpAssembly))
@@ -742,6 +855,7 @@ namespace System.Diagnostics
                 s_asyncCallbackModifier = CreateFieldSetter<AsyncCallback>(lazyAsyncResultType, "m_AsyncCallback", BindingFlags.NonPublic | BindingFlags.Instance);
                 s_asyncStateAccessor = CreateFieldGetter<object>(lazyAsyncResultType, "m_AsyncState", BindingFlags.NonPublic | BindingFlags.Instance);
                 s_asyncStateModifier = CreateFieldSetter<object>(lazyAsyncResultType, "m_AsyncState", BindingFlags.NonPublic | BindingFlags.Instance);
+                s_endCalledAccessor = CreateFieldGetter<bool>(lazyAsyncResultType, "m_EndCalled", BindingFlags.NonPublic | BindingFlags.Instance);
                 s_resultAccessor = CreateFieldGetter<object>(lazyAsyncResultType, "m_Result", BindingFlags.NonPublic | BindingFlags.Instance);
             }
 
@@ -755,6 +869,7 @@ namespace System.Diagnostics
                 && s_asyncCallbackModifier != null
                 && s_asyncStateAccessor != null
                 && s_asyncStateModifier != null
+                && s_endCalledAccessor != null
                 && s_resultAccessor != null
                 && s_isContextAwareResultChecker != null;
         }
@@ -950,7 +1065,8 @@ namespace System.Diagnostics
         private const string TraceParentHeaderName = "traceparent";
         private const string TraceStateHeaderName = "tracestate";
 
-        private static readonly AsyncCallback s_asyncCallback = AsyncCallback;
+        private static readonly AsyncCallback s_readAsyncCallback = ReadAsyncCallback;
+        private static readonly AsyncCallback s_writeAsyncCallback = WriteAsyncCallback;
 
         // Fields for controlling initialization of the HttpHandlerDiagnosticListener singleton
         private bool _initialized = false;
@@ -961,6 +1077,7 @@ namespace System.Diagnostics
         private static FieldInfo s_connectionListField;
         private static Type s_connectionType;
         private static FieldInfo s_writeListField;
+        private static Func<object, object> s_writeAResultAccessor;
         private static Func<object, object> s_readAResultAccessor;
 
         // LazyAsyncResult & ContextAwareResult
@@ -968,6 +1085,7 @@ namespace System.Diagnostics
         private static Action<object, AsyncCallback> s_asyncCallbackModifier;
         private static Func<object, object> s_asyncStateAccessor;
         private static Action<object, object> s_asyncStateModifier;
+        private static Func<object, bool> s_endCalledAccessor;
         private static Func<object, object> s_resultAccessor;
         private static Func<object, bool> s_isContextAwareResultChecker;
 
