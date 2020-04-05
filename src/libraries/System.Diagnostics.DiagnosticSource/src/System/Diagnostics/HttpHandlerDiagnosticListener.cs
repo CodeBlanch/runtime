@@ -730,7 +730,7 @@ namespace System.Diagnostics
             // Clear our saved callback so we know not to process again.
             s_asyncCallbackModifier(writeAsyncContext, null);
 
-            if (s_endCalledAccessor.Invoke(readAsyncContext))
+            if (s_endCalledAccessor.Invoke(readAsyncContext) || readAsyncContext.CompletedSynchronously)
             {
                 // We need to process the result directly because the read callback has already fired. Force a copy because response has likely already been disposed.
                 ProcessResult(readAsyncContext, null, writeAsyncContextCallback.Request, writeAsyncContextCallback.Activity, s_resultAccessor(readAsyncContext), true);

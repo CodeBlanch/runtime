@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -733,6 +734,60 @@ namespace System.Diagnostics.Tests
                     Assert.Equal(2, eventRecords.Records.Count());
                     Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Start")));
                     Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Exception")));
+                }
+            }
+        }
+
+        [OuterLoop]
+        [Theory]
+        [InlineData("GET", true)]
+        [InlineData("POST", true)]
+        [InlineData("POST", false)]
+        public async Task TestAsyncEventsCompletedSynchronously(string method, bool readRequestContent)
+        {
+            using (HttpListener server = new HttpListener())
+            {
+                server.Prefixes.Add("http://localhost:8018/dotnet/tests/");
+                server.Start();
+
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        var context = server.GetContext();
+
+                        if (readRequestContent)
+                        {
+                            using (Stream receiveStream = context.Request.InputStream)
+                            {
+                                using (StreamReader readStream = new StreamReader(receiveStream, Encoding.UTF8))
+                                {
+                                    readStream.ReadToEnd();
+                                }
+                            }
+                        }
+
+                        context.Response.StatusCode = (int)HttpStatusCode.OK;
+                        context.Response.Close();
+                    }
+                    catch (HttpListenerException)
+                    {
+                    }
+                });
+
+                using (var eventRecords = new EventObserverAndRecorder())
+                {
+                    using (var client = new HttpClient())
+                    {
+                        using HttpResponseMessage response = method == "GET"
+                            ? await client.GetAsync("http://localhost:8018/dotnet/tests")
+                            : await client.PostAsync("http://localhost:8018/dotnet/tests", new StringContent("hello world"));
+                    }
+
+                    // We should have one Start event, no Stop event, and one Exception event.
+                    Assert.Equal(2, eventRecords.Records.Count());
+                    Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Start")));
+                    Assert.Equal(1, eventRecords.Records.Count(rec => rec.Key.EndsWith("Stop")));
                 }
             }
         }
