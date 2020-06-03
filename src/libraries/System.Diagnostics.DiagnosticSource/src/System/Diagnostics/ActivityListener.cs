@@ -46,7 +46,7 @@ namespace System.Diagnostics
         /// <summary>
         /// Set or get the callback used to decide allowing creating <see cref="Activity"/> objects with specific data state.
         /// </summary>
-        public GetRequestedData<ActivityContext>? GetRequestedDataUsingContext { get; set; }
+        public GetRequestedData<ParentActivityState>? GetRequestedDataUsingContext { get; set; }
 
         /// <summary>
         /// Dispose will unregister this <see cref="ActivityListener"/> object from listeneing to <see cref="Activity"/> events.

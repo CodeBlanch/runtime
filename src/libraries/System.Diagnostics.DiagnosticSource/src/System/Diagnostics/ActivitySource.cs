@@ -133,12 +133,19 @@ namespace System.Diagnostics
             }
             else
             {
-                ActivityContext initializedContext =  context == default && Activity.Current != null ? Activity.Current.Context : context;
-                listeners.EnumWithFunc(listener => {
+                ParentActivityState parentActivityState = BuildParentActivityState(context);
+                listeners.EnumWithFunc(listener =>
+                {
                     var getRequestedDataUsingContext = listener.GetRequestedDataUsingContext;
                     if (getRequestedDataUsingContext != null)
                     {
-                        ActivityCreationOptions<ActivityContext> aco = new ActivityCreationOptions<ActivityContext>(this, name, initializedContext, kind, tags, links);
+                        ActivityCreationOptions<ParentActivityState> aco = new ActivityCreationOptions<ParentActivityState>(
+                            this,
+                            name,
+                            parentActivityState,
+                            kind,
+                            tags,
+                            links);
                         ActivityDataRequest dr = getRequestedDataUsingContext(ref aco);
                         if (dr > dataRequest)
                         {
@@ -241,6 +248,26 @@ namespace System.Diagnostics
             {
                 listeners.EnumWithAction(listener => listener.ActivityStopped?.Invoke(activity));
             }
+        }
+
+        private static ParentActivityState BuildParentActivityState(ActivityContext context)
+        {
+            bool isDefaultContext = context == default;
+
+            Activity? currentActivity = Activity.Current;
+            ActivityContext initializedContext = !isDefaultContext
+                ? context
+                : currentActivity?.Context ?? context;
+
+            ActivityDataRequest parentDataRequested = isDefaultContext
+                ? ActivityDataRequest.None
+                : (initializedContext.TraceFlags & ActivityTraceFlags.Recorded) == ActivityTraceFlags.Recorded
+                    ? ActivityDataRequest.AllDataAndRecorded
+                    : currentActivity?.IsAllDataRequested == true
+                        ? ActivityDataRequest.AllData
+                        : ActivityDataRequest.PropagationData;
+
+            return new ParentActivityState(parentDataRequested, initializedContext);
         }
     }
 
