@@ -156,16 +156,31 @@ namespace System.Diagnostics
     // Note: Some consumers use this Enumerator dynamically to avoid allocations.
     internal struct Enumerator<T> : IEnumerator<T>
     {
+        [AllowNull]
+        private static T s_Default = default;
         private DiagNode<T>? _nextNode;
-        [AllowNull, MaybeNull] private T _currentItem;
+        private DiagNode<T>? _currentNode;
 
         public Enumerator(DiagNode<T>? head)
         {
             _nextNode = head;
-            _currentItem = default;
+            _currentNode = null;
         }
 
-        public T Current => _currentItem!;
+        public readonly ref T Current
+        {
+#if ALLOW_PARTIALLY_TRUSTED_CALLERS
+            [System.Security.SecuritySafeCriticalAttribute]
+#endif
+            get
+            {
+                if (_currentNode == null)
+                    return ref s_Default!;
+                return ref _currentNode.Value;
+            }
+        }
+
+        T IEnumerator<T>.Current => Current;
 
         object? IEnumerator.Current => Current;
 
@@ -173,11 +188,11 @@ namespace System.Diagnostics
         {
             if (_nextNode == null)
             {
-                _currentItem = default;
+                _currentNode = null;
                 return false;
             }
 
-            _currentItem = _nextNode.Value;
+            _currentNode = _nextNode;
             _nextNode = _nextNode.Next;
             return true;
         }
