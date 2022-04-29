@@ -8,7 +8,7 @@ namespace Microsoft.Extensions.Logging
     /// <summary>
     /// ILogger extension methods for common scenarios.
     /// </summary>
-    public static class LoggerExtensions
+    public static partial class LoggerExtensions
     {
         private static readonly Func<FormattedLogValues, Exception?, string> _messageFormatter = MessageFormatter;
 

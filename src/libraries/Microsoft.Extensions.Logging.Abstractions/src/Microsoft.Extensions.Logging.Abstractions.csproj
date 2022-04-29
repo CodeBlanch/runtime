@@ -19,26 +19,27 @@ Microsoft.Extensions.Logging.Abstractions.NullLogger</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="$(CommonPath)Extensions\TypeNameHelper\TypeNameHelper.cs"
-             Link="Common\src\Extensions\TypeNameHelper\TypeNameHelper.cs" />
-    <Compile Include="$(CommonPath)Extensions\Logging\NullExternalScopeProvider.cs"
-             Link="Common\src\Extensions\Logging\NullExternalScopeProvider.cs" />
-    <Compile Include="$(CommonPath)Extensions\Logging\NullScope.cs"
-             Link="Common\src\Extensions\Logging\NullScope.cs" />
-    <Compile Include="$(CommonPath)System\Text\ValueStringBuilder.cs"
-             Link="Common\System\Text\ValueStringBuilder.cs" />
-    <Compile Include="$(CommonPath)System\ThrowHelper.cs"
-             Link="Common\System\ThrowHelper.cs" />
+    <Compile Include="$(CommonPath)Extensions\TypeNameHelper\TypeNameHelper.cs" Link="Common\src\Extensions\TypeNameHelper\TypeNameHelper.cs" />
+    <Compile Include="$(CommonPath)Extensions\Logging\NullExternalScopeProvider.cs" Link="Common\src\Extensions\Logging\NullExternalScopeProvider.cs" />
+    <Compile Include="$(CommonPath)Extensions\Logging\NullScope.cs" Link="Common\src\Extensions\Logging\NullScope.cs" />
+    <Compile Include="$(CommonPath)System\Text\ValueStringBuilder.cs" Link="Common\System\Text\ValueStringBuilder.cs" />
+    <Compile Include="$(CommonPath)System\ThrowHelper.cs" Link="Common\System\ThrowHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">
+    <Compile Include="$(CoreLibSharedDir)System\Diagnostics\CodeAnalysis\DynamicallyAccessedMembersAttribute.cs" />
+    <Compile Include="$(CoreLibSharedDir)System\Diagnostics\CodeAnalysis\DynamicallyAccessedMemberTypes.cs" />
+    <Compile Include="$(CoreLibSharedDir)System\Diagnostics\CodeAnalysis\UnconditionalSuppressMessageAttribute.cs" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">
     <PackageReference Include="System.Buffers" Version="$(SystemBuffersVersion)" />
     <PackageReference Include="System.Memory" Version="$(SystemMemoryVersion)" />
+    <PackageReference Include="System.ValueTuple" Version="$(SystemValueTupleVersion)" Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'" />
   </ItemGroup>
 
   <ItemGroup>
-    <AnalyzerReference Include="..\gen\Microsoft.Extensions.Logging.Generators.Roslyn3.11.csproj"
-                       Condition="'$(DotNetBuildFromSource)' != 'true'" />
+    <AnalyzerReference Include="..\gen\Microsoft.Extensions.Logging.Generators.Roslyn3.11.csproj" Condition="'$(DotNetBuildFromSource)' != 'true'" />
     <AnalyzerReference Include="..\gen\Microsoft.Extensions.Logging.Generators.Roslyn4.0.csproj" />
   </ItemGroup>
 
