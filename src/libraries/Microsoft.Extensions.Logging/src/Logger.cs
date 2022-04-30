@@ -4,9 +4,11 @@
 using System;
 using System.Collections.Generic;
 
+using Microsoft.Extensions.Logging.Payloads;
+
 namespace Microsoft.Extensions.Logging
 {
-    internal sealed class Logger : ILogger
+    internal sealed class Logger : IPayloadLogger
     {
         public Logger(LoggerInformation[] loggers) => Loggers = loggers;
 
@@ -44,6 +46,72 @@ namespace Microsoft.Extensions.Logging
                 try
                 {
                     logger.Log(logLevel, eventId, state, exception, formatter);
+                }
+                catch (Exception ex)
+                {
+                    if (exceptions == null)
+                    {
+                        exceptions = new List<Exception>();
+                    }
+
+                    exceptions.Add(ex);
+                }
+            }
+        }
+
+        public void Log<TPayload>(
+            LogLevel logLevel,
+            EventId eventId,
+            in TPayload? payload,
+            Exception? exception,
+            string message,
+            LoggingPayloadConverter<TPayload>? converter = null,
+            LoggingPayloadSerializerOptions? options = null)
+        {
+            MessageLogger[]? loggers = MessageLoggers;
+            if (loggers == null)
+            {
+                return;
+            }
+
+            List<Exception>? exceptions = null;
+            for (int i = 0; i < loggers.Length; i++)
+            {
+                ref readonly MessageLogger loggerInfo = ref loggers[i];
+                if (!loggerInfo.IsEnabled(logLevel))
+                {
+                    continue;
+                }
+
+                LoggerLog(loggerInfo.Logger, ref exceptions, logLevel, eventId, in payload, exception, message, converter, options);
+            }
+
+            if (exceptions != null && exceptions.Count > 0)
+            {
+                ThrowLoggingError(exceptions);
+            }
+
+            static void LoggerLog(
+                ILogger logger,
+                ref List<Exception>? exceptions,
+                LogLevel logLevel,
+                EventId eventId,
+                in TPayload? payload,
+                Exception? exception,
+                string message,
+                LoggingPayloadConverter<TPayload>? converter = null,
+                LoggingPayloadSerializerOptions? options = null)
+            {
+                try
+                {
+                    if (logger is IPayloadLogger payloadLogger)
+                    {
+                        payloadLogger.Log(logLevel, eventId, in payload, exception, message, converter, options);
+                    }
+                    else
+                    {
+                        logger.LogPayloadAsState(logLevel, eventId, in payload, exception, message, converter, options);
+                    }
                 }
                 catch (Exception ex)
                 {

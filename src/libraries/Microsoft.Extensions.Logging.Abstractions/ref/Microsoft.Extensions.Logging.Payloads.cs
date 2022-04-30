@@ -290,6 +290,7 @@ namespace Microsoft.Extensions.Logging.Payloads
     public class LoggingPayloadSerializerOptions
     {
         public static LoggingPayloadSerializerOptions Default { get; }
+        public bool IsDefaultInstance { get; }
         public LoggingPayloadSerializerOptions() { }
         public System.Func<Microsoft.Extensions.Logging.Payloads.LoggingPayloadWriteTarget>? DefaultWriteTargetFactory { get; set; }
         public System.Collections.Generic.IDictionary<System.Type, Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter> Converters { get; }

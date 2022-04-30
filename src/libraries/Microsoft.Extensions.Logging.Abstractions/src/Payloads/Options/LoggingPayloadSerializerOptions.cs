@@ -69,12 +69,17 @@ public class LoggingPayloadSerializerOptions
         IsDefaultInstance = isDefaultInstance;
     }
 
-    internal bool IsDefaultInstance { get; }
+    public bool IsDefaultInstance { get; }
 
     public Func<LoggingPayloadWriteTarget>? DefaultWriteTargetFactory
     {
         get => _DefaultWriteTargetFactory;
-        set => _DefaultWriteTargetFactory = value ?? throw new ArgumentNullException(nameof(value));
+        set
+        {
+            if (value == null && IsDefaultInstance)
+                throw new ArgumentNullException(nameof(value));
+            _DefaultWriteTargetFactory = value;
+        }
     }
 
     public IDictionary<Type, LoggingPayloadConverter> Converters => _RegisteredLoggingPayloadConverters;
