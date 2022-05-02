@@ -9,7 +9,7 @@ namespace Microsoft.Extensions.Logging;
 
 public static partial class LoggerExtensions
 {
-    public static void LogDebug<TPayload>(
+    public static void LogDebugPayload<TPayload>(
         this ILogger logger,
         EventId eventId,
         in TPayload? payload,
@@ -17,7 +17,7 @@ public static partial class LoggerExtensions
         LoggingPayloadConverter<TPayload>? converter = null,
         LoggingPayloadSerializerOptions? options = null)
     {
-        Log(
+        LogPayload(
             logger,
             LogLevel.Debug,
             eventId,
@@ -28,14 +28,14 @@ public static partial class LoggerExtensions
             options);
     }
 
-    public static void LogDebug<TPayload>(
+    public static void LogDebugPayload<TPayload>(
         this ILogger logger,
         in TPayload? payload,
         string message,
         LoggingPayloadConverter<TPayload>? converter = null,
         LoggingPayloadSerializerOptions? options = null)
     {
-        Log(
+        LogPayload(
             logger,
             LogLevel.Debug,
             eventId: default,
@@ -46,7 +46,7 @@ public static partial class LoggerExtensions
             options);
     }
 
-    public static void LogDebug<TPayload>(
+    public static void LogDebugPayload<TPayload>(
         this ILogger logger,
         in TPayload? payload,
         Exception? exception,
@@ -54,7 +54,7 @@ public static partial class LoggerExtensions
         LoggingPayloadConverter<TPayload>? converter = null,
         LoggingPayloadSerializerOptions? options = null)
     {
-        Log(
+        LogPayload(
             logger,
             LogLevel.Debug,
             eventId: default,
@@ -65,7 +65,7 @@ public static partial class LoggerExtensions
             options);
     }
 
-    public static void LogDebug<TPayload>(
+    public static void LogDebugPayload<TPayload>(
         this ILogger logger,
         EventId eventId,
         in TPayload? payload,
@@ -74,7 +74,7 @@ public static partial class LoggerExtensions
         LoggingPayloadConverter<TPayload>? converter = null,
         LoggingPayloadSerializerOptions? options = null)
     {
-        Log(
+        LogPayload(
             logger,
             LogLevel.Debug,
             eventId,

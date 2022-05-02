@@ -10,7 +10,7 @@ namespace Microsoft.Extensions.Logging;
 
 public static partial class LoggerExtensions
 {
-    public static void Log<TPayload>(
+    public static void LogPayload<TPayload>(
         this ILogger logger,
         LogLevel logLevel,
         EventId eventId,

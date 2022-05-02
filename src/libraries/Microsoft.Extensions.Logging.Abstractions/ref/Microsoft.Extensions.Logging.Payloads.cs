@@ -20,7 +20,7 @@ namespace Microsoft.Extensions.Logging
 
     public static partial class LoggerExtensions
     {
-        public static void Log<TPayload>(
+        public static void LogPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.LogLevel logLevel,
             Microsoft.Extensions.Logging.EventId eventId,
@@ -44,7 +44,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogCritical<TPayload>(
+        public static void LogCriticalPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -54,7 +54,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogCritical<TPayload>(
+        public static void LogCriticalPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             string message,
@@ -63,47 +63,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogCritical<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            in TPayload? payload,
-            System.Exception? exception,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogCritical<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            Microsoft.Extensions.Logging.EventId eventId,
-            in TPayload? payload,
-            System.Exception? exception,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogDebug<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            Microsoft.Extensions.Logging.EventId eventId,
-            in TPayload? payload,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogDebug<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            in TPayload? payload,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogDebug<TPayload>(
+        public static void LogCriticalPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             System.Exception? exception,
@@ -113,7 +73,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogDebug<TPayload>(
+        public static void LogCriticalPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -124,7 +84,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogError<TPayload>(
+        public static void LogDebugPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -134,7 +94,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogError<TPayload>(
+        public static void LogDebugPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             string message,
@@ -143,47 +103,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogError<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            in TPayload? payload,
-            System.Exception? exception,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogError<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            Microsoft.Extensions.Logging.EventId eventId,
-            in TPayload? payload,
-            System.Exception? exception,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogInformation<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            Microsoft.Extensions.Logging.EventId eventId,
-            in TPayload? payload,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogInformation<TPayload>(
-            this Microsoft.Extensions.Logging.ILogger logger,
-            in TPayload? payload,
-            string message,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
-            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
-        {
-        }
-
-        public static void LogInformation<TPayload>(
+        public static void LogDebugPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             System.Exception? exception,
@@ -193,7 +113,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogInformation<TPayload>(
+        public static void LogDebugPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -204,7 +124,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogTrace<TPayload>(
+        public static void LogErrorPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -214,7 +134,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogTrace<TPayload>(
+        public static void LogErrorPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             string message,
@@ -223,7 +143,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogTrace<TPayload>(
+        public static void LogErrorPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             System.Exception? exception,
@@ -233,7 +153,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogTrace<TPayload>(
+        public static void LogErrorPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -244,7 +164,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogWarning<TPayload>(
+        public static void LogInfoPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
@@ -254,7 +174,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogWarning<TPayload>(
+        public static void LogInfoPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             string message,
@@ -263,7 +183,7 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogWarning<TPayload>(
+        public static void LogInfoPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             in TPayload? payload,
             System.Exception? exception,
@@ -273,7 +193,87 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
-        public static void LogWarning<TPayload>(
+        public static void LogInfoPayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            Microsoft.Extensions.Logging.EventId eventId,
+            in TPayload? payload,
+            System.Exception? exception,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogTracePayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            Microsoft.Extensions.Logging.EventId eventId,
+            in TPayload? payload,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogTracePayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            in TPayload? payload,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogTracePayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            in TPayload? payload,
+            System.Exception? exception,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogTracePayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            Microsoft.Extensions.Logging.EventId eventId,
+            in TPayload? payload,
+            System.Exception? exception,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogWarningPayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            Microsoft.Extensions.Logging.EventId eventId,
+            in TPayload? payload,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogWarningPayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            in TPayload? payload,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogWarningPayload<TPayload>(
+            this Microsoft.Extensions.Logging.ILogger logger,
+            in TPayload? payload,
+            System.Exception? exception,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
+        public static void LogWarningPayload<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,
             in TPayload? payload,
