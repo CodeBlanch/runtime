@@ -69,7 +69,12 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
 
     public override void OnWriteNullValue() => _Builder.Append("null");
 
-    public override void OnWriteValue(char value) => _Builder.Append(value);
+    public override void OnWriteValue(char value)
+    {
+        _Builder.Append('"');
+        _Builder.Append(value);
+        _Builder.Append('"');
+    }
 
 #if NET6_0_OR_GREATER
     public override void OnWriteValue(int value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");

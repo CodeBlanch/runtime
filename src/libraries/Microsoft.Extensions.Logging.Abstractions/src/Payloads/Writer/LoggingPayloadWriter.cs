@@ -59,13 +59,8 @@ public readonly ref partial struct LoggingPayloadWriter
 
     public void BeginObject(string? typeName = null)
     {
-        if (CurrentScope == ScopeType.Object)
-            throw new InvalidOperationException();
+        EnsureCanBeginNestedType();
 
-        if (State.HasValue)
-            throw new InvalidOperationException();
-
-        State.HasValue = true;
         State.Push(ScopeType.Object, clearChildItemCount: true, typeOrPropertyName: typeName);
         _Target.OnBeginObject();
     }
@@ -81,13 +76,8 @@ public readonly ref partial struct LoggingPayloadWriter
 
     public void BeginArray(string? typeName = null)
     {
-        if (CurrentScope == ScopeType.Object)
-            throw new InvalidOperationException();
+        EnsureCanBeginNestedType();
 
-        if (State.HasValue)
-            throw new InvalidOperationException();
-
-        State.HasValue = true;
         State.Push(ScopeType.Array, clearChildItemCount: true, typeOrPropertyName: typeName);
         _Target.OnBeginArray();
     }
@@ -305,6 +295,32 @@ public readonly ref partial struct LoggingPayloadWriter
             BeginValueInternal();
             WriteNullValueInternal();
             EndPropertyInternal();
+        }
+    }
+
+    private void EnsureCanBeginNestedType()
+    {
+        ScopeType currentScope = CurrentScope;
+        if (currentScope == ScopeType.Array)
+        {
+            if (State.ChildItemCount++ > 0)
+            {
+                Debug.Assert(State.HasValue);
+                _Target.OnWriteSeparator();
+            }
+            else
+            {
+                State.HasValue = true;
+            }
+        }
+        else
+        {
+            if (currentScope == ScopeType.Object)
+                throw new InvalidOperationException();
+
+            if (State.HasValue)
+                throw new InvalidOperationException();
+            State.HasValue = true;
         }
     }
 
