@@ -6,16 +6,17 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Payloads;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.Logging.Console
 {
     internal sealed class JsonConsoleFormatter : ConsoleFormatter, IDisposable
     {
+        [ThreadStatic]
+        private static LoggingPayloadJsonWriteTarget? s_JsonTarget;
+
         private IDisposable? _optionsReloadToken;
 
         public JsonConsoleFormatter(IOptionsMonitor<JsonConsoleFormatterOptions> options)
@@ -25,6 +26,8 @@ namespace Microsoft.Extensions.Logging.Console
             _optionsReloadToken = options.OnChange(ReloadLoggerOptions);
         }
 
+        public override bool SupportsWritingPayload => true;
+
         public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
             string message = logEntry.Formatter(logEntry.State, logEntry.Exception);
@@ -32,61 +35,117 @@ namespace Microsoft.Extensions.Logging.Console
             {
                 return;
             }
+
             LogLevel logLevel = logEntry.LogLevel;
             string category = logEntry.Category;
             int eventId = logEntry.EventId.Id;
             Exception? exception = logEntry.Exception;
-            const int DefaultBufferSize = 1024;
-            using (var output = new PooledByteBufferWriter(DefaultBufferSize))
+
+            LoggingPayloadJsonWriteTarget target = GetTarget();
+            LoggingPayloadWriter writer = new(target);
+
+            writer.BeginObject();
+            var timestampFormat = FormatterOptions.TimestampFormat;
+            if (timestampFormat != null)
             {
-                using (var writer = new Utf8JsonWriter(output, FormatterOptions.JsonWriterOptions))
-                {
-                    writer.WriteStartObject();
-                    var timestampFormat = FormatterOptions.TimestampFormat;
-                    if (timestampFormat != null)
-                    {
-                        DateTimeOffset dateTimeOffset = FormatterOptions.UseUtcTimestamp ? DateTimeOffset.UtcNow : DateTimeOffset.Now;
-                        writer.WriteString("Timestamp", dateTimeOffset.ToString(timestampFormat));
-                    }
-                    writer.WriteNumber(nameof(logEntry.EventId), eventId);
-                    writer.WriteString(nameof(logEntry.LogLevel), GetLogLevelString(logLevel));
-                    writer.WriteString(nameof(logEntry.Category), category);
-                    writer.WriteString("Message", message);
-
-                    if (exception != null)
-                    {
-                        string exceptionMessage = exception.ToString();
-                        if (!FormatterOptions.JsonWriterOptions.Indented)
-                        {
-                            exceptionMessage = exceptionMessage.Replace(Environment.NewLine, " ");
-                        }
-                        writer.WriteString(nameof(Exception), exceptionMessage);
-                    }
-
-                    if (logEntry.State != null)
-                    {
-                        writer.WriteStartObject(nameof(logEntry.State));
-                        writer.WriteString("Message", logEntry.State.ToString());
-                        if (logEntry.State is IReadOnlyCollection<KeyValuePair<string, object>> stateProperties)
-                        {
-                            foreach (KeyValuePair<string, object> item in stateProperties)
-                            {
-                                WriteItem(writer, item);
-                            }
-                        }
-                        writer.WriteEndObject();
-                    }
-                    WriteScopeInformation(writer, scopeProvider);
-                    writer.WriteEndObject();
-                    writer.Flush();
-                }
-#if NETCOREAPP
-                textWriter.Write(Encoding.UTF8.GetString(output.WrittenMemory.Span));
-#else
-                textWriter.Write(Encoding.UTF8.GetString(output.WrittenMemory.Span.ToArray()));
-#endif
+                WriteTimestamp(ref writer, timestampFormat);
             }
+            writer.WriteProperty(nameof(logEntry.EventId), eventId);
+            writer.WriteProperty(nameof(logEntry.LogLevel), GetLogLevelString(logLevel));
+            writer.WriteProperty(nameof(logEntry.Category), category);
+            writer.WriteProperty("Message", message);
+
+            if (exception != null)
+            {
+                string exceptionMessage = exception.ToString();
+                if (!FormatterOptions.JsonWriterOptions.Indented)
+                {
+                    exceptionMessage = exceptionMessage.Replace(Environment.NewLine, " ");
+                }
+                writer.WriteProperty(nameof(Exception), exceptionMessage);
+            }
+
+            if (logEntry.State != null)
+            {
+                writer.BeginProperty(nameof(logEntry.State));
+                writer.BeginObject();
+                writer.WriteProperty("Message", logEntry.State.ToString());
+                if (logEntry.State is IReadOnlyCollection<KeyValuePair<string, object>> stateProperties)
+                {
+                    foreach (KeyValuePair<string, object> item in stateProperties)
+                    {
+                        WriteItem(ref writer, item);
+                    }
+                }
+                writer.EndObject();
+                writer.EndProperty();
+            }
+            WriteScopeInformation(ref writer, target, scopeProvider);
+            writer.EndObject();
+            writer.Flush();
+
+            target.CopyTo(textWriter);
             textWriter.Write(Environment.NewLine);
+        }
+
+        public override void Write<TPayload>(in LogPayloadEntry<TPayload> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
+        {
+            if (logEntry.Exception == null && logEntry.Message == null)
+            {
+                return;
+            }
+
+            LogLevel logLevel = logEntry.LogLevel;
+            string category = logEntry.Category;
+            int eventId = logEntry.EventId.Id;
+            Exception? exception = logEntry.Exception;
+
+            LoggingPayloadJsonWriteTarget target = GetTarget();
+            LoggingPayloadWriter writer = new(target);
+
+            writer.BeginObject();
+            var timestampFormat = FormatterOptions.TimestampFormat;
+            if (timestampFormat != null)
+            {
+                WriteTimestamp(ref writer, timestampFormat);
+            }
+            writer.WriteProperty(nameof(logEntry.EventId), eventId);
+            writer.WriteProperty(nameof(logEntry.LogLevel), GetLogLevelString(logLevel));
+            writer.WriteProperty(nameof(logEntry.Category), category);
+            writer.WriteProperty(nameof(logEntry.Message), logEntry.Message);
+
+            if (exception != null)
+            {
+                string exceptionMessage = exception.ToString();
+                if (!FormatterOptions.JsonWriterOptions.Indented)
+                {
+                    exceptionMessage = exceptionMessage.Replace(Environment.NewLine, " ");
+                }
+                writer.WriteProperty(nameof(Exception), exceptionMessage);
+            }
+
+            WriteScopeInformation(ref writer, target, scopeProvider);
+
+            ref readonly TPayload? payload = ref LogPayloadEntry<TPayload>.GetPayload(in logEntry);
+
+            writer.BeginProperty("Payload");
+            LoggingPayloadSerializer.Serialize(target, in payload, logEntry.Converter, logEntry.Options);
+            writer.EndProperty();
+
+            writer.EndObject();
+            writer.Flush();
+
+            target.CopyTo(textWriter);
+            textWriter.Write(Environment.NewLine);
+        }
+
+        private static LoggingPayloadJsonWriteTarget GetTarget()
+        {
+            LoggingPayloadJsonWriteTarget target = s_JsonTarget ??= new LoggingPayloadJsonWriteTarget();
+
+            target.Reset();
+
+            return target;
         }
 
         private static string GetLogLevelString(LogLevel logLevel)
@@ -103,85 +162,104 @@ namespace Microsoft.Extensions.Logging.Console
             };
         }
 
-        private void WriteScopeInformation(Utf8JsonWriter writer, IExternalScopeProvider? scopeProvider)
+        private void WriteTimestamp(ref LoggingPayloadWriter writer, string? timestampFormat)
         {
-            if (FormatterOptions.IncludeScopes && scopeProvider != null)
+            DateTimeOffset dateTimeOffset = FormatterOptions.UseUtcTimestamp ? DateTimeOffset.UtcNow : DateTimeOffset.Now;
+#if NET6_0_OR_GREATER
+            Span<char> data = stackalloc char[64];
+            if (dateTimeOffset.TryFormat(data, out int charsWritten, timestampFormat))
             {
-                writer.WriteStartArray("Scopes");
-                scopeProvider.ForEachScope((scope, state) =>
-                {
-                    if (scope is IEnumerable<KeyValuePair<string, object>> scopeItems)
-                    {
-                        state.WriteStartObject();
-                        state.WriteString("Message", scope.ToString());
-                        foreach (KeyValuePair<string, object> item in scopeItems)
-                        {
-                            WriteItem(state, item);
-                        }
-                        state.WriteEndObject();
-                    }
-                    else
-                    {
-                        state.WriteStringValue(ToInvariantString(scope));
-                    }
-                }, writer);
-                writer.WriteEndArray();
+                writer.WriteProperty("Timestamp", data.Slice(0, charsWritten));
+            }
+            else
+#endif
+            {
+                writer.WriteProperty("Timestamp", dateTimeOffset.ToString(timestampFormat));
             }
         }
 
-        private static void WriteItem(Utf8JsonWriter writer, KeyValuePair<string, object> item)
+        private void WriteScopeInformation(ref LoggingPayloadWriter writer, LoggingPayloadJsonWriteTarget target, IExternalScopeProvider? scopeProvider)
+        {
+            if (FormatterOptions.IncludeScopes && scopeProvider != null)
+            {
+                writer.BeginProperty("Scopes");
+                writer.BeginArray();
+
+                scopeProvider.ForEachScope(static (scope, state) =>
+                {
+                    LoggingPayloadWriter writer = new(state);
+                    if (scope is IEnumerable<KeyValuePair<string, object>> scopeItems)
+                    {
+                        writer.BeginObject();
+                        writer.WriteProperty("Message", scope.ToString());
+                        foreach (KeyValuePair<string, object> item in scopeItems)
+                        {
+                            WriteItem(ref writer, item);
+                        }
+                        writer.EndObject();
+                    }
+                    else
+                    {
+                        string? s = ToInvariantString(scope);
+                        if (s != null)
+                            writer.WriteValue(s);
+                    }
+                }, target);
+
+                writer.EndArray();
+                writer.EndProperty();
+            }
+        }
+
+        private static void WriteItem(ref LoggingPayloadWriter writer, KeyValuePair<string, object> item)
         {
             var key = item.Key;
             switch (item.Value)
             {
                 case bool boolValue:
-                    writer.WriteBoolean(key, boolValue);
+                    writer.WriteProperty(key, boolValue);
                     break;
                 case byte byteValue:
-                    writer.WriteNumber(key, byteValue);
+                    writer.WriteProperty(key, byteValue);
                     break;
                 case sbyte sbyteValue:
-                    writer.WriteNumber(key, sbyteValue);
+                    writer.WriteProperty(key, sbyteValue);
                     break;
                 case char charValue:
-#if NETCOREAPP
-                    writer.WriteString(key, MemoryMarshal.CreateSpan(ref charValue, 1));
-#else
-                    writer.WriteString(key, charValue.ToString());
-#endif
+                    writer.WriteProperty(key, charValue);
                     break;
                 case decimal decimalValue:
-                    writer.WriteNumber(key, decimalValue);
+                    writer.WriteProperty(key, decimalValue);
                     break;
                 case double doubleValue:
-                    writer.WriteNumber(key, doubleValue);
+                    writer.WriteProperty(key, doubleValue);
                     break;
                 case float floatValue:
-                    writer.WriteNumber(key, floatValue);
+                    writer.WriteProperty(key, floatValue);
                     break;
                 case int intValue:
-                    writer.WriteNumber(key, intValue);
+                    writer.WriteProperty(key, intValue);
                     break;
                 case uint uintValue:
-                    writer.WriteNumber(key, uintValue);
+                    writer.WriteProperty(key, uintValue);
                     break;
                 case long longValue:
-                    writer.WriteNumber(key, longValue);
+                    writer.WriteProperty(key, longValue);
                     break;
                 case ulong ulongValue:
-                    writer.WriteNumber(key, ulongValue);
+                    writer.WriteProperty(key, ulongValue);
                     break;
                 case short shortValue:
-                    writer.WriteNumber(key, shortValue);
+                    writer.WriteProperty(key, shortValue);
                     break;
                 case ushort ushortValue:
-                    writer.WriteNumber(key, ushortValue);
+                    writer.WriteProperty(key, ushortValue);
                     break;
                 case null:
-                    writer.WriteNull(key);
+                    writer.WriteNullProperty(key);
                     break;
                 default:
-                    writer.WriteString(key, ToInvariantString(item.Value));
+                    writer.WriteProperty(key, ToInvariantString(item.Value));
                     break;
             }
         }
