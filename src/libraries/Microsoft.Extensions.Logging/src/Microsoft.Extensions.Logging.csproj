@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(NetCoreAppCurrent);$(NetCoreAppMinimum);netstandard2.1;netstandard2.0;$(NetFrameworkMinimum)</TargetFrameworks>
@@ -16,8 +16,6 @@
              Link="Common\src\Extensions\Logging\NullScope.cs" />
     <Compile Include="$(CommonPath)System\ThrowHelper.cs"
              Link="Common\System\ThrowHelper.cs" />
-    <Compile Include="$(LibrariesProjectRoot)Microsoft.Extensions.Logging.Abstractions\src\Payloads\Extensions\LoggerExtensions.LogPayloadAsState.cs"
-             Link="Payloads\Extensions\LoggerExtensions.LogPayloadAsState.cs" />
   </ItemGroup>
 
   <ItemGroup>

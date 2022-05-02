@@ -9,12 +9,7 @@ using Microsoft.Extensions.Logging.Payloads;
 
 namespace Microsoft.Extensions.Logging
 {
-#if BUILDING_LOGGER_ABSTRACTIONS
-    public
-#else
-    internal
-#endif
-    static partial class LoggerExtensions
+    public static partial class LoggerExtensions
     {
         private static readonly Func<FormattedPayload, Exception?, string> s_Formatter = (f, e) => f.ToString();
 
@@ -33,8 +28,8 @@ namespace Microsoft.Extensions.Logging
             return options.DefaultWriteTargetFactory();
         }
 
-        internal static void LogPayloadAsState<TPayload>(
-            this ILogger logger,
+        public static void LogPayloadAsState<TPayload>(
+            ILogger logger,
             LogLevel logLevel,
             EventId eventId,
             in TPayload? payload,

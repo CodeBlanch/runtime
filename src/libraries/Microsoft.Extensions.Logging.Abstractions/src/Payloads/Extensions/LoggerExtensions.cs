@@ -28,7 +28,7 @@ public static partial class LoggerExtensions
         }
         else if (logger.IsEnabled(logLevel))
         {
-            logger.LogPayloadAsState(logLevel, eventId, in payload, exception, message, converter, options);
+            LogPayloadAsState(logger, logLevel, eventId, in payload, exception, message, converter, options);
         }
     }
 }

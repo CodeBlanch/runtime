@@ -32,6 +32,18 @@ namespace Microsoft.Extensions.Logging
         {
         }
 
+        public static void LogPayloadAsState<TPayload>(
+            Microsoft.Extensions.Logging.ILogger logger,
+            Microsoft.Extensions.Logging.LogLevel logLevel,
+            Microsoft.Extensions.Logging.EventId eventId,
+            in TPayload? payload,
+            System.Exception? exception,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+
         public static void LogCritical<TPayload>(
             this Microsoft.Extensions.Logging.ILogger logger,
             Microsoft.Extensions.Logging.EventId eventId,

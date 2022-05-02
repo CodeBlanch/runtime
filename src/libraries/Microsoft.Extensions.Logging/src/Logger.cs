@@ -110,7 +110,7 @@ namespace Microsoft.Extensions.Logging
                     }
                     else
                     {
-                        logger.LogPayloadAsState(logLevel, eventId, in payload, exception, message, converter, options);
+                        LoggerExtensions.LogPayloadAsState(logger, logLevel, eventId, in payload, exception, message, converter, options);
                     }
                 }
                 catch (Exception ex)
