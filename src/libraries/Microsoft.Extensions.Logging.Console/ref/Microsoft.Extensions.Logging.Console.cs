@@ -29,7 +29,9 @@ namespace Microsoft.Extensions.Logging.Console
     {
         protected ConsoleFormatter(string name) { }
         public string Name { get { throw null; } }
+        public virtual bool SupportsWritingPayload { get { throw null; } }
         public abstract void Write<TState>(in Microsoft.Extensions.Logging.Abstractions.LogEntry<TState> logEntry, Microsoft.Extensions.Logging.IExternalScopeProvider? scopeProvider, System.IO.TextWriter textWriter);
+        public virtual void Write<TPayload>(in Microsoft.Extensions.Logging.Payloads.LogPayloadEntry<TPayload> logEntry, Microsoft.Extensions.Logging.IExternalScopeProvider? scopeProvider, System.IO.TextWriter textWriter) => throw null;
     }
     public static partial class ConsoleFormatterNames
     {

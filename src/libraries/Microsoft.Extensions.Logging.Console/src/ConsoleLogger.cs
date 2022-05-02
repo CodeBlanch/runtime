@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Payloads;
 
 namespace Microsoft.Extensions.Logging.Console
 {
     [UnsupportedOSPlatform("browser")]
-    internal sealed class ConsoleLogger : ILogger
+    internal sealed class ConsoleLogger : IPayloadLogger
     {
         private readonly string _name;
         private readonly ConsoleLoggerProcessor _queueProcessor;
@@ -65,7 +65,40 @@ namespace Microsoft.Extensions.Logging.Console
             _queueProcessor.EnqueueMessage(new LogMessageEntry(computedAnsiString, logAsError: logLevel >= Options.LogToStandardErrorThreshold));
         }
 
-        public bool IsEnabled(LogLevel logLevel)
+        public void Log<TPayload>(LogLevel logLevel, EventId eventId, in TPayload? payload, Exception? exception, string message, LoggingPayloadConverter<TPayload>? converter = null, LoggingPayloadSerializerOptions? options = null)
+        {
+            if (!Formatter.SupportsWritingPayload)
+            {
+                LoggerExtensions.LogPayloadAsState(this, logLevel, eventId, in payload, exception, message, converter, options);
+                return;
+            }
+
+            if (!IsEnabled(logLevel))
+            {
+                return;
+            }
+
+            t_stringWriter ??= new StringWriter();
+
+            LogPayloadEntry<TPayload> logEntry = new LogPayloadEntry<TPayload>(logLevel, _name, eventId, in payload, exception, message, converter, options);
+
+            Formatter.Write(in logEntry, ScopeProvider, t_stringWriter);
+
+            var sb = t_stringWriter.GetStringBuilder();
+            if (sb.Length == 0)
+            {
+                return;
+            }
+            string computedAnsiString = sb.ToString();
+            sb.Clear();
+            if (sb.Capacity > 1024)
+            {
+                sb.Capacity = 1024;
+            }
+            _queueProcessor.EnqueueMessage(new LogMessageEntry(computedAnsiString, logAsError: logLevel >= Options.LogToStandardErrorThreshold));
+        }
+
+            public bool IsEnabled(LogLevel logLevel)
         {
             return logLevel != LogLevel.None;
         }

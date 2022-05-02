@@ -288,6 +288,29 @@ namespace Microsoft.Extensions.Logging
 
 namespace Microsoft.Extensions.Logging.Payloads
 {
+    public readonly ref struct LogPayloadEntry<TPayload>
+    {
+        public LogPayloadEntry(
+            Microsoft.Extensions.Logging.LogLevel logLevel,
+            string category,
+            Microsoft.Extensions.Logging.EventId eventId,
+            in TPayload? payload,
+            System.Exception? exception,
+            string message,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter = null,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options = null)
+        {
+        }
+        public Microsoft.Extensions.Logging.LogLevel LogLevel { get { throw null; } }
+        public string Category { get { throw null; } }
+        public Microsoft.Extensions.Logging.EventId EventId { get { throw null; } }
+        public System.Exception? Exception { get { throw null; } }
+        public string Message { get { throw null; } }
+        public Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? Converter { get { throw null; } }
+        public Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? Options { get { throw null; } }
+        public static ref readonly TPayload? GetPayload(in LogPayloadEntry<TPayload> logEntry) => throw null;
+    }
+
     public abstract class LoggingPayloadConverter
     {
         internal LoggingPayloadConverter() { }
