@@ -141,17 +141,14 @@ namespace Microsoft.Extensions.Logging.Console
 
         private LoggingPayloadJsonWriteTarget GetTarget()
         {
+            // Store s_JsonTarget into a local just in case an options change happens at the same time.
             ThreadLocal<LoggingPayloadJsonWriteTarget> jsonTarget = s_JsonTarget;
 
-            LoggingPayloadJsonWriteTarget target;
-            if (!jsonTarget.IsValueCreated)
+            LoggingPayloadJsonWriteTarget? target = jsonTarget.Value;
+            if (target == null)
             {
                 target = new LoggingPayloadJsonWriteTarget(indented: FormatterOptions.JsonWriterOptions.Indented);
                 jsonTarget.Value = target;
-            }
-            else
-            {
-                target = jsonTarget.Value!;
             }
 
             target.Reset();
