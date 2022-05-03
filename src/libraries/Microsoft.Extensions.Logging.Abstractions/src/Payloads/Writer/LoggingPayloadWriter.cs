@@ -61,8 +61,8 @@ public readonly ref partial struct LoggingPayloadWriter
     {
         EnsureCanBeginNestedType();
 
-        State.Push(ScopeType.Object, clearChildItemCount: true, typeOrPropertyName: typeName);
         _Target.OnBeginObject();
+        State.Push(ScopeType.Object, clearChildItemCount: true, typeOrPropertyName: typeName);
     }
 
     public void EndObject()
@@ -78,8 +78,8 @@ public readonly ref partial struct LoggingPayloadWriter
     {
         EnsureCanBeginNestedType();
 
-        State.Push(ScopeType.Array, clearChildItemCount: true, typeOrPropertyName: typeName);
         _Target.OnBeginArray();
+        State.Push(ScopeType.Array, clearChildItemCount: true, typeOrPropertyName: typeName);
     }
 
     public void EndArray()
@@ -134,8 +134,8 @@ public readonly ref partial struct LoggingPayloadWriter
         if (State.ChildItemCount > 0)
             _Target.OnWriteSeparator();
 
-        State.Push(ScopeType.Property, clearChildItemCount: false, typeOrPropertyName: propertyName);
         _Target.OnBeginProperty(propertyName);
+        State.Push(ScopeType.Property, clearChildItemCount: false, typeOrPropertyName: propertyName);
     }
 
     internal void EndPropertyInternal()

@@ -505,6 +505,7 @@ namespace Microsoft.Extensions.Logging.Payloads
 
     public class LoggingPayloadWriteTarget
     {
+        public bool InProperty { get { throw null; } }
         public virtual void Reset() { }
         public virtual void OnBeginObject() { }
         public virtual void OnEndObject() { }
@@ -540,7 +541,7 @@ namespace Microsoft.Extensions.Logging.Payloads
 
     public sealed class LoggingPayloadJsonWriteTarget : Microsoft.Extensions.Logging.Payloads.LoggingPayloadWriteTarget
     {
-        public LoggingPayloadJsonWriteTarget(int initialCapacity = 1024) { }
+        public LoggingPayloadJsonWriteTarget(bool indented = false, int initialCapacity = 1024) { }
         public void CopyTo(System.IO.TextWriter textWriter) { }
         public void CopyTo(System.Text.StringBuilder stringBuilder) { }
     }

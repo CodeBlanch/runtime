@@ -13,17 +13,21 @@ namespace Microsoft.Extensions.Logging.Payloads;
 public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
 {
     private readonly StringBuilder _Builder;
+    private readonly bool _Indented;
     private string? _ToStringResult;
+    private int _IndentLevel;
 
-    public LoggingPayloadJsonWriteTarget(int initialCapacity = 1024)
+    public LoggingPayloadJsonWriteTarget(bool indented = false, int initialCapacity = 1024)
     {
         _Builder = new(initialCapacity);
+        _Indented = indented;
     }
 
     public override void Reset()
     {
         _Builder.Clear();
         _ToStringResult = null;
+        _IndentLevel = 0;
 
         base.Reset();
     }
@@ -50,21 +54,78 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
     private string ToStringNoCache()
         => _Builder.ToString();
 
-    public override void OnBeginObject() => _Builder.Append('{');
+    public override void OnBeginObject()
+    {
+        if (_Indented && !InProperty)
+        {
+            WritePadding();
+        }
+        _Builder.Append('{');
+        if (_Indented)
+        {
+            _Builder.AppendLine();
+            _IndentLevel++;
+        }
+    }
 
-    public override void OnEndObject() => _Builder.Append('}');
+    public override void OnEndObject()
+    {
+        if (_Indented)
+        {
+            _Builder.AppendLine();
+            _IndentLevel--;
+            WritePadding();
+        }
+        _Builder.Append('}');
+    }
 
-    public override void OnBeginArray() => _Builder.Append('[');
+    public override void OnBeginArray()
+    {
+        if (_Indented && !InProperty)
+        {
+            WritePadding();
+        }
+        _Builder.Append('[');
+        if (_Indented)
+        {
+            _Builder.AppendLine();
+            _IndentLevel++;
+        }
+    }
 
-    public override void OnEndArray() => _Builder.Append(']');
+    public override void OnEndArray()
+    {
+        if (_Indented)
+        {
+            _Builder.AppendLine();
+            _IndentLevel--;
+            WritePadding();
+        }
+        _Builder.Append(']');
+    }
 
-    public override void OnWriteSeparator() => _Builder.Append(',');
+    public override void OnWriteSeparator()
+    {
+        _Builder.Append(',');
+        if (_Indented)
+        {
+            _Builder.AppendLine();
+        }
+    }
 
     public override void OnBeginProperty(string propertyName)
     {
+        if (_Indented)
+        {
+            WritePadding();
+        }
         _Builder.Append('"');
         _Builder.Append(propertyName);
         _Builder.Append("\":");
+        if (_Indented)
+        {
+            _Builder.Append(' ');
+        }
     }
 
     public override void OnWriteNullValue() => _Builder.Append("null");
@@ -258,6 +319,14 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         _Builder.Append(Convert.ToBase64String(value.ToArray()));
 #endif
         _Builder.Append('"');
+    }
+
+    private void WritePadding()
+    {
+        for (int i = 0; i < _IndentLevel; i++)
+        {
+            _Builder.Append('\t');
+        }
     }
 
 #if NETCOREAPP3_1_OR_GREATER

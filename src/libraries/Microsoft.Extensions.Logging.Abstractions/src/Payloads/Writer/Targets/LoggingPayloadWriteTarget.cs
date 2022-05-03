@@ -9,6 +9,8 @@ public class LoggingPayloadWriteTarget
 {
     internal LoggingPayloadWriterState WriterState { get; } = new();
 
+    public bool InProperty => WriterState.Scope == LoggingPayloadWriter.ScopeType.Property;
+
     public virtual void Reset()
         => WriterState.Reset();
 
