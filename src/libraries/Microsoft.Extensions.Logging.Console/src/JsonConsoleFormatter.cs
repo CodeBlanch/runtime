@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Payloads;
 using Microsoft.Extensions.Options;
@@ -14,8 +15,7 @@ namespace Microsoft.Extensions.Logging.Console
 {
     internal sealed class JsonConsoleFormatter : ConsoleFormatter, IDisposable
     {
-        [ThreadStatic]
-        private static LoggingPayloadJsonWriteTarget? s_JsonTarget;
+        private static ThreadLocal<LoggingPayloadJsonWriteTarget> s_JsonTarget = new();
 
         private IDisposable? _optionsReloadToken;
 
@@ -139,9 +139,20 @@ namespace Microsoft.Extensions.Logging.Console
             textWriter.Write(Environment.NewLine);
         }
 
-        private static LoggingPayloadJsonWriteTarget GetTarget()
+        private LoggingPayloadJsonWriteTarget GetTarget()
         {
-            LoggingPayloadJsonWriteTarget target = s_JsonTarget ??= new LoggingPayloadJsonWriteTarget();
+            ThreadLocal<LoggingPayloadJsonWriteTarget> jsonTarget = s_JsonTarget;
+
+            LoggingPayloadJsonWriteTarget target;
+            if (!jsonTarget.IsValueCreated)
+            {
+                target = new LoggingPayloadJsonWriteTarget(indented: FormatterOptions.JsonWriterOptions.Indented);
+                jsonTarget.Value = target;
+            }
+            else
+            {
+                target = jsonTarget.Value!;
+            }
 
             target.Reset();
 
@@ -271,7 +282,22 @@ namespace Microsoft.Extensions.Logging.Console
         [MemberNotNull(nameof(FormatterOptions))]
         private void ReloadLoggerOptions(JsonConsoleFormatterOptions options)
         {
+            JsonConsoleFormatterOptions? oldOptions = FormatterOptions;
+
             FormatterOptions = options;
+
+            if (oldOptions != null
+                && oldOptions.JsonWriterOptions.Indented != options.JsonWriterOptions.Indented)
+            {
+                /* If indention has changed create a new ThreadLocal. This will
+                cause creation of new targets with correct indention as log
+                calls are processed. The existing targets will be collected when
+                the finalizer runs. It would be better to dispose here, but that
+                would cause a race with anyone currently inside GetTarget.
+                Indention changing should be an extremely rare event so the
+                finalizer cost isn't significant. */
+                s_JsonTarget = new();
+            }
         }
 
         public void Dispose()
