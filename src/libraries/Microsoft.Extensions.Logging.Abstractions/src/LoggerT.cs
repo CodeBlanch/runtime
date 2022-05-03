@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.Extensions.Internal;
+using Microsoft.Extensions.Logging.Payloads;
 
 namespace Microsoft.Extensions.Logging
 {
@@ -11,7 +12,7 @@ namespace Microsoft.Extensions.Logging
     /// provided <see cref="ILoggerFactory"/>.
     /// </summary>
     /// <typeparam name="T">The type.</typeparam>
-    public class Logger<T> : ILogger<T>
+    public class Logger<T> : ILogger<T>, IPayloadLogger
     {
         private readonly ILogger _logger;
 
@@ -42,6 +43,20 @@ namespace Microsoft.Extensions.Logging
         void ILogger.Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             _logger.Log(logLevel, eventId, state, exception, formatter);
+        }
+
+        /// <inheritdoc />
+        void IPayloadLogger.Log<TPayload>(LogLevel logLevel, EventId eventId, in TPayload? payload, Exception? exception, string message, LoggingPayloadConverter<TPayload>? converter, LoggingPayloadSerializerOptions? options)
+            where TPayload : default
+        {
+            if (_logger is IPayloadLogger payloadLogger)
+            {
+                payloadLogger.Log(logLevel, eventId, in payload, exception, message, converter, options);
+            }
+            else
+            {
+                LoggerExtensions.LogPayloadAsState(_logger, logLevel, eventId, in payload, exception, message, converter, options);
+            }
         }
     }
 }

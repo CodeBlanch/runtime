@@ -565,7 +565,7 @@ public ref partial struct LoggingPayloadWriter
         LoggingPayloadConverter<T>? converter = null)
         where T : struct
     {
-        if (value is null)
+        if (!value.HasValue)
         {
             HandleNullProperty(propertyName);
         }

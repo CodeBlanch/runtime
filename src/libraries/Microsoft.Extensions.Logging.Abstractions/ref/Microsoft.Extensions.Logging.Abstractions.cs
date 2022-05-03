@@ -131,12 +131,13 @@ namespace Microsoft.Extensions.Logging
         public string Message { get { throw null; } set { } }
         public bool SkipEnabledCheck { get { throw null; } set { } }
     }
-    public partial class Logger<T> : Microsoft.Extensions.Logging.ILogger, Microsoft.Extensions.Logging.ILogger<T>
+    public partial class Logger<T> : Microsoft.Extensions.Logging.ILogger, Microsoft.Extensions.Logging.IPayloadLogger, Microsoft.Extensions.Logging.ILogger<T>
     {
         public Logger(Microsoft.Extensions.Logging.ILoggerFactory factory) { }
         System.IDisposable? Microsoft.Extensions.Logging.ILogger.BeginScope<TState>(TState state) { throw null; }
         bool Microsoft.Extensions.Logging.ILogger.IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) { throw null; }
         void Microsoft.Extensions.Logging.ILogger.Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, System.Exception? exception, System.Func<TState, System.Exception?, string> formatter) { }
+        void Microsoft.Extensions.Logging.IPayloadLogger.Log<TPayload>(LogLevel logLevel, EventId eventId, in TPayload? payload, System.Exception? exception, string message, Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<TPayload>? converter, Microsoft.Extensions.Logging.Payloads.LoggingPayloadSerializerOptions? options) where TPayload : default { }
     }
     public enum LogLevel
     {
