@@ -23,13 +23,11 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         _Indented = indented;
     }
 
-    public override void Reset()
+    protected override void OnReset()
     {
         _Builder.Clear();
         _ToStringResult = null;
         _IndentLevel = 0;
-
-        base.Reset();
     }
 
     public void CopyTo(TextWriter textWriter)
@@ -54,7 +52,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
     private string ToStringNoCache()
         => _Builder.ToString();
 
-    public override void OnBeginObject()
+    public override void AppendBeginObject()
     {
         if (_Indented && !InProperty)
         {
@@ -68,7 +66,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         }
     }
 
-    public override void OnEndObject()
+    public override void AppendEndObject()
     {
         if (_Indented)
         {
@@ -79,7 +77,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         _Builder.Append('}');
     }
 
-    public override void OnBeginArray()
+    public override void AppendBeginArray()
     {
         if (_Indented && !InProperty)
         {
@@ -93,7 +91,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         }
     }
 
-    public override void OnEndArray()
+    public override void AppendEndArray()
     {
         if (_Indented)
         {
@@ -104,16 +102,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         _Builder.Append(']');
     }
 
-    public override void OnWriteSeparator()
-    {
-        _Builder.Append(',');
-        if (_Indented)
-        {
-            _Builder.AppendLine();
-        }
-    }
-
-    public override void OnBeginProperty(string propertyName)
+    public override void AppendBeginProperty(string propertyName)
     {
         if (_Indented)
         {
@@ -128,9 +117,18 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         }
     }
 
-    public override void OnWriteNullValue() => _Builder.Append("null");
+    public override void AppendSeparator()
+    {
+        _Builder.Append(',');
+        if (_Indented)
+        {
+            _Builder.AppendLine();
+        }
+    }
 
-    public override void OnWriteValue(char value)
+    public override void AppendNullValue() => _Builder.Append("null");
+
+    public override void AppendValue(char value)
     {
         _Builder.Append('"');
         _Builder.Append(value);
@@ -138,60 +136,60 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
     }
 
 #if NET6_0_OR_GREATER
-    public override void OnWriteValue(int value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(int value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
     [CLSCompliant(false)]
-    public override void OnWriteValue(uint value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(uint value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
-    public override void OnWriteValue(long value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
-
-    [CLSCompliant(false)]
-    public override void OnWriteValue(ulong value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
-
-    public override void OnWriteValue(short value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(long value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
     [CLSCompliant(false)]
-    public override void OnWriteValue(ushort value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(ulong value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
-    public override void OnWriteValue(byte value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(short value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
     [CLSCompliant(false)]
-    public override void OnWriteValue(sbyte value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(ushort value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
-    public override void OnWriteValue(double value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(byte value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
-    public override void OnWriteValue(float value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    [CLSCompliant(false)]
+    public override void AppendValue(sbyte value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 
-    public override void OnWriteValue(decimal value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+    public override void AppendValue(double value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+
+    public override void AppendValue(float value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
+
+    public override void AppendValue(decimal value) => _Builder.Append(CultureInfo.InvariantCulture, $"{value:G}");
 #else
-    public override void OnWriteValue(int value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(int value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
     [CLSCompliant(false)]
-    public override void OnWriteValue(uint value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(uint value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
-    public override void OnWriteValue(long value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
-
-    [CLSCompliant(false)]
-    public override void OnWriteValue(ulong value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
-
-    public override void OnWriteValue(short value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(long value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
     [CLSCompliant(false)]
-    public override void OnWriteValue(ushort value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(ulong value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
-    public override void OnWriteValue(byte value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(short value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
     [CLSCompliant(false)]
-    public override void OnWriteValue(sbyte value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(ushort value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
-    public override void OnWriteValue(double value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(byte value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
-    public override void OnWriteValue(float value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    [CLSCompliant(false)]
+    public override void AppendValue(sbyte value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 
-    public override void OnWriteValue(decimal value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+    public override void AppendValue(double value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+
+    public override void AppendValue(float value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
+
+    public override void AppendValue(decimal value) => _Builder.Append(value.ToString("{0:G}", CultureInfo.InvariantCulture));
 #endif
 
-    public override unsafe void OnWriteValue(string value)
+    public override unsafe void AppendValue(string value)
     {
         fixed (char* ptr = value)
         {
@@ -199,7 +197,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         }
     }
 
-    public override unsafe void OnWriteValue(ReadOnlySpan<char> value)
+    public override unsafe void AppendValue(ReadOnlySpan<char> value)
     {
         fixed (char* ptr = value)
         {
@@ -282,16 +280,16 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         _Builder.Append(character);
     }
 
-    public override void OnWriteValue(bool value)
+    public override void AppendValue(bool value)
         => _Builder.Append(value ? "true" : "false");
 
-    public override void OnWriteValue(byte[] value)
+    public override void AppendValue(byte[] value)
     {
         _Builder.Append('"');
 #if NETCOREAPP3_1_OR_GREATER
         if (value.Length < 64)
         {
-            OnWriteValueInternal(value.AsSpan());
+            AppendValueInternal(value.AsSpan());
         }
         else
         {
@@ -303,13 +301,13 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
         _Builder.Append('"');
     }
 
-    public override void OnWriteValue(ReadOnlySpan<byte> value)
+    public override void AppendValue(ReadOnlySpan<byte> value)
     {
         _Builder.Append('"');
 #if NETCOREAPP3_1_OR_GREATER
         if (value.Length < 64)
         {
-            OnWriteValueInternal(value);
+            AppendValueInternal(value);
         }
         else
         {
@@ -330,7 +328,7 @@ public sealed class LoggingPayloadJsonWriteTarget : LoggingPayloadWriteTarget
     }
 
 #if NETCOREAPP3_1_OR_GREATER
-    private void OnWriteValueInternal(ReadOnlySpan<byte> value)
+    private void AppendValueInternal(ReadOnlySpan<byte> value)
     {
         Span<char> data = stackalloc char[128];
         bool result = Convert.TryToBase64Chars(value, data, out int charsWritten);

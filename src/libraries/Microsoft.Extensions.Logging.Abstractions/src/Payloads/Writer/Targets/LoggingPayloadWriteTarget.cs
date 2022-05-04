@@ -5,118 +5,95 @@ using System;
 
 namespace Microsoft.Extensions.Logging.Payloads;
 
-public class LoggingPayloadWriteTarget
+public abstract class LoggingPayloadWriteTarget
 {
     internal LoggingPayloadWriterState WriterState { get; } = new();
 
     public bool InProperty => WriterState.Scope == LoggingPayloadWriter.ScopeType.Property;
 
-    public virtual void Reset()
-        => WriterState.Reset();
-
-    public virtual void OnBeginObject()
+    protected LoggingPayloadWriteTarget()
     {
     }
 
-    public virtual void OnEndObject()
+    public void Reset()
+    {
+        WriterState.Reset();
+        OnReset();
+    }
+
+    protected virtual void OnReset()
     {
     }
 
-    public virtual void OnBeginArray()
+    public abstract void AppendBeginObject();
+
+    public abstract void AppendEndObject();
+
+    public abstract void AppendBeginArray();
+
+    public abstract void AppendEndArray();
+
+    public abstract void AppendBeginProperty(string propertyName);
+
+    public virtual void AppendEndProperty()
     {
     }
 
-    public virtual void OnEndArray()
+    public virtual void AppendSeparator()
     {
     }
 
-    public virtual void OnBeginProperty(string propertyName)
-    {
-    }
+    public abstract void AppendNullValue();
 
-    public virtual void OnEndProperty()
-    {
-    }
+    public abstract void AppendValue(string value);
 
-    public virtual void OnWriteSeparator()
-    {
-    }
+    public virtual void AppendValue(ReadOnlySpan<char> value)
+        => AppendValue(value.ToString());
 
-    public virtual void OnWriteNullValue()
-    {
-    }
-
-    public virtual void OnWriteValue(string value)
-    {
-    }
-
-    public virtual void OnWriteValue(ReadOnlySpan<char> value)
-    {
-    }
-
-    public virtual void OnWriteValue(int value)
-    {
-    }
+    public virtual void AppendValue(int value)
+        => AppendValue((long)value);
 
     [CLSCompliant(false)]
-    public virtual void OnWriteValue(uint value)
-    {
-    }
+    public virtual void AppendValue(uint value)
+        => AppendValue((long)value);
 
-    public virtual void OnWriteValue(long value)
-    {
-    }
+    public abstract void AppendValue(long value);
 
     [CLSCompliant(false)]
-    public virtual void OnWriteValue(ulong value)
-    {
-    }
+    public virtual void AppendValue(ulong value)
+        => AppendValue((long)value);
 
-    public virtual void OnWriteValue(byte value)
-    {
-    }
+    public virtual void AppendValue(byte value)
+        => AppendValue((long)value);
 
     [CLSCompliant(false)]
-    public virtual void OnWriteValue(sbyte value)
-    {
-    }
+    public virtual void AppendValue(sbyte value)
+        => AppendValue((long)value);
 
-    public virtual void OnWriteValue(char value)
-    {
-    }
+    public virtual void AppendValue(char value)
+        => AppendValue((long)value);
 
-    public virtual void OnWriteValue(short value)
-    {
-    }
+    public virtual void AppendValue(short value)
+        => AppendValue((long)value);
 
     [CLSCompliant(false)]
-    public virtual void OnWriteValue(ushort value)
-    {
-    }
+    public virtual void AppendValue(ushort value)
+        => AppendValue((long)value);
 
-    public virtual void OnWriteValue(double value)
-    {
-    }
+    public abstract void AppendValue(double value);
 
-    public virtual void OnWriteValue(float value)
-    {
-    }
+    public virtual void AppendValue(float value)
+        => AppendValue((double)value);
 
-    public virtual void OnWriteValue(decimal value)
-    {
-    }
+    public virtual void AppendValue(decimal value)
+        => AppendValue((double)value);
 
-    public virtual void OnWriteValue(byte[] value)
-    {
-    }
+    public abstract void AppendValue(byte[] value);
 
-    public virtual void OnWriteValue(ReadOnlySpan<byte> value)
-    {
-    }
+    public virtual void AppendValue(ReadOnlySpan<byte> value)
+        => AppendValue(value.ToArray());
 
-    public virtual void OnWriteValue(bool value)
-    {
-    }
+    public abstract void AppendValue(bool value);
 
     public virtual void Flush()
     {

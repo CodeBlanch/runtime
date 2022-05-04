@@ -503,39 +503,41 @@ namespace Microsoft.Extensions.Logging.Payloads
         }
     }
 
-    public class LoggingPayloadWriteTarget
+    public abstract class LoggingPayloadWriteTarget
     {
         public bool InProperty { get { throw null; } }
-        public virtual void Reset() { }
-        public virtual void OnBeginObject() { }
-        public virtual void OnEndObject() { }
-        public virtual void OnBeginArray() { }
-        public virtual void OnEndArray() { }
-        public virtual void OnBeginProperty(string propertyName) { }
-        public virtual void OnEndProperty() { }
-        public virtual void OnWriteSeparator() { }
-        public virtual void OnWriteNullValue() { }
-        public virtual void OnWriteValue(string value) { }
-        public virtual void OnWriteValue(System.ReadOnlySpan<char> value) { }
-        public virtual void OnWriteValue(int value) { }
+        protected LoggingPayloadWriteTarget() { }
+        public void Reset() { }
+        protected virtual void OnReset() { }
+        public abstract void AppendBeginObject();
+        public abstract void AppendEndObject();
+        public abstract void AppendBeginArray();
+        public abstract void AppendEndArray();
+        public abstract void AppendBeginProperty(string propertyName);
+        public virtual void AppendEndProperty() { }
+        public virtual void AppendSeparator() { }
+        public abstract void AppendNullValue();
+        public abstract void AppendValue(string value);
+        public virtual void AppendValue(System.ReadOnlySpan<char> value) { }
+        public virtual void AppendValue(int value) { }
         [System.CLSCompliant(false)]
-        public virtual void OnWriteValue(uint value) { }
-        public virtual void OnWriteValue(long value) { }
+        public virtual void AppendValue(uint value) { }
+        public abstract void AppendValue(long value);
         [System.CLSCompliant(false)]
-        public virtual void OnWriteValue(ulong value) { }
-        public virtual void OnWriteValue(byte value) { }
+        public virtual void AppendValue(ulong value) { }
+        public virtual void AppendValue(byte value) { }
         [System.CLSCompliant(false)]
-        public virtual void OnWriteValue(sbyte value) { }
-        public virtual void OnWriteValue(char value) { }
-        public virtual void OnWriteValue(short value) { }
+        public virtual void AppendValue(sbyte value) { }
+        public virtual void AppendValue(char value) { }
+        public virtual void AppendValue(short value) { }
         [System.CLSCompliant(false)]
-        public virtual void OnWriteValue(ushort value) { }
-        public virtual void OnWriteValue(double value) { }
-        public virtual void OnWriteValue(float value) { }
-        public virtual void OnWriteValue(decimal value) { }
-        public virtual void OnWriteValue(byte[] value) { }
-        public virtual void OnWriteValue(System.ReadOnlySpan<byte> value) { }
-        public virtual void OnWriteValue(bool value) { }
+        public virtual void AppendValue(ushort value) { }
+        public abstract void AppendValue(double value);
+        public virtual void AppendValue(float value) { }
+        public virtual void AppendValue(decimal value) { }
+        public abstract void AppendValue(byte[] value);
+        public virtual void AppendValue(System.ReadOnlySpan<byte> value) { }
+        public abstract void AppendValue(bool value);
         public virtual void Flush() { }
     }
 
@@ -544,6 +546,17 @@ namespace Microsoft.Extensions.Logging.Payloads
         public LoggingPayloadJsonWriteTarget(bool indented = false, int initialCapacity = 1024) { }
         public void CopyTo(System.IO.TextWriter textWriter) { }
         public void CopyTo(System.Text.StringBuilder stringBuilder) { }
+        public override void AppendBeginObject() { }
+        public override void AppendEndObject() { }
+        public override void AppendBeginArray() { }
+        public override void AppendEndArray() { }
+        public override void AppendBeginProperty(string propertyName) { }
+        public override void AppendNullValue() { }
+        public override void AppendValue(string value) { }
+        public override void AppendValue(long value) { }
+        public override void AppendValue(double value) { }
+        public override void AppendValue(byte[] value) { }
+        public override void AppendValue(bool value) { }
     }
 
     public sealed class LoggingPayloadStringWriteTarget : Microsoft.Extensions.Logging.Payloads.LoggingPayloadWriteTarget
@@ -551,6 +564,17 @@ namespace Microsoft.Extensions.Logging.Payloads
         public LoggingPayloadStringWriteTarget(int initialCapacity = 1024) { }
         public void CopyTo(System.IO.TextWriter textWriter) { }
         public void CopyTo(System.Text.StringBuilder stringBuilder) { }
+        public override void AppendBeginObject() { }
+        public override void AppendEndObject() { }
+        public override void AppendBeginArray() { }
+        public override void AppendEndArray() { }
+        public override void AppendBeginProperty(string propertyName) { }
+        public override void AppendNullValue() { }
+        public override void AppendValue(string value) { }
+        public override void AppendValue(long value) { }
+        public override void AppendValue(double value) { }
+        public override void AppendValue(byte[] value) { }
+        public override void AppendValue(bool value) { }
     }
 
     public static class LoggingPayloadMetadataServices

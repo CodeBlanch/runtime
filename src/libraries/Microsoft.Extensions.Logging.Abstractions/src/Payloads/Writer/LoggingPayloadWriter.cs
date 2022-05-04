@@ -61,7 +61,7 @@ public readonly ref partial struct LoggingPayloadWriter
     {
         EnsureCanBeginNestedType();
 
-        _Target.OnBeginObject();
+        _Target.AppendBeginObject();
         State.Push(ScopeType.Object, clearChildItemCount: true, typeOrPropertyName: typeName);
     }
 
@@ -71,14 +71,14 @@ public readonly ref partial struct LoggingPayloadWriter
             throw new InvalidOperationException();
 
         State.Pop();
-        _Target.OnEndObject();
+        _Target.AppendEndObject();
     }
 
     public void BeginArray(string? typeName = null)
     {
         EnsureCanBeginNestedType();
 
-        _Target.OnBeginArray();
+        _Target.AppendBeginArray();
         State.Push(ScopeType.Array, clearChildItemCount: true, typeOrPropertyName: typeName);
     }
 
@@ -88,7 +88,7 @@ public readonly ref partial struct LoggingPayloadWriter
             throw new InvalidOperationException();
 
         State.Pop();
-        _Target.OnEndArray();
+        _Target.AppendEndArray();
     }
 
     public void BeginProperty(string propertyName)
@@ -132,9 +132,9 @@ public readonly ref partial struct LoggingPayloadWriter
         Debug.Assert(!string.IsNullOrEmpty(propertyName));
 
         if (State.ChildItemCount > 0)
-            _Target.OnWriteSeparator();
+            _Target.AppendSeparator();
 
-        _Target.OnBeginProperty(propertyName);
+        _Target.AppendBeginProperty(propertyName);
         State.Push(ScopeType.Property, clearChildItemCount: false, typeOrPropertyName: propertyName);
     }
 
@@ -143,7 +143,7 @@ public readonly ref partial struct LoggingPayloadWriter
         Debug.Assert(CurrentScope == ScopeType.Property);
 
         State.Pop();
-        _Target.OnEndProperty();
+        _Target.AppendEndProperty();
     }
 
     internal void BeginValueInternal()
@@ -155,7 +155,7 @@ public readonly ref partial struct LoggingPayloadWriter
             if (State.ChildItemCount++ > 0)
             {
                 Debug.Assert(State.HasValue);
-                _Target.OnWriteSeparator();
+                _Target.AppendSeparator();
             }
             else
             {
@@ -171,66 +171,66 @@ public readonly ref partial struct LoggingPayloadWriter
     }
 
     internal void WriteNullValueInternal()
-        => _Target.OnWriteNullValue();
+        => _Target.AppendNullValue();
 
     internal void WriteValueInternal(string value)
     {
         Debug.Assert(value != null);
 
-        _Target.OnWriteValue(value);
+        _Target.AppendValue(value);
     }
 
     internal void WriteValueInternal(int value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(uint value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(long value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(ulong value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(short value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(ushort value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(byte value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(sbyte value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(char value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(double value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(float value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(decimal value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(byte[] value)
     {
         Debug.Assert(value != null);
 
-        _Target.OnWriteValue(value);
+        _Target.AppendValue(value);
     }
 
     internal void WriteValueInternal(bool value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(ReadOnlySpan<char> value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(ReadOnlySpan<byte> value)
-        => _Target.OnWriteValue(value);
+        => _Target.AppendValue(value);
 
     internal void WriteValueInternal(ReadOnlySpan<char> value, LoggingPayloadMaskOptions maskOptions)
     {
@@ -306,7 +306,7 @@ public readonly ref partial struct LoggingPayloadWriter
             if (State.ChildItemCount++ > 0)
             {
                 Debug.Assert(State.HasValue);
-                _Target.OnWriteSeparator();
+                _Target.AppendSeparator();
             }
             else
             {
