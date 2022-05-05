@@ -638,7 +638,7 @@ namespace Microsoft.Extensions.Logging.Payloads
     }
 
     [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    public sealed class LoggingPayloadConverterAttribute : System.Attribute
+    public class LoggingPayloadConverterAttribute : System.Attribute
     {
         public System.Type ConverterType { get; }
 
@@ -661,7 +661,7 @@ namespace Microsoft.Extensions.Logging.Payloads
     }
 
     [System.AttributeUsage(System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    public sealed class LoggingPayloadMaskAttribute : System.Attribute
+    public class LoggingPayloadMaskAttribute : System.Attribute
     {
         public char MaskCharacter { get; set; }
         public int MaskLength { get; set; }

@@ -9,7 +9,7 @@ using System.Reflection;
 namespace Microsoft.Extensions.Logging.Payloads;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-public sealed class LoggingPayloadConverterAttribute : Attribute
+public class LoggingPayloadConverterAttribute : Attribute
 {
     private static readonly ConcurrentDictionary<Type, LoggingPayloadConverter> s_ConverterCache = new();
 
