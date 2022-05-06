@@ -637,7 +637,7 @@ namespace Microsoft.Extensions.Logging.Payloads
         }
     }
 
-    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
     public class LoggingPayloadConverterAttribute : System.Attribute
     {
         public System.Type ConverterType { get; }
@@ -660,7 +660,7 @@ namespace Microsoft.Extensions.Logging.Payloads
     {
     }
 
-    [System.AttributeUsage(System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [System.AttributeUsage(System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
     public class LoggingPayloadMaskAttribute : System.Attribute
     {
         public char MaskCharacter { get; set; }
@@ -669,12 +669,12 @@ namespace Microsoft.Extensions.Logging.Payloads
         public int UnmaskedEndingCharacterCount { get; set; }
     }
 
-    [System.AttributeUsage(System.AttributeTargets.Enum | System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [System.AttributeUsage(System.AttributeTargets.Enum | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
     public sealed class LoggingPayloadNumericEnumAttribute : System.Attribute
     {
     }
 
-    [System.AttributeUsage(System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [System.AttributeUsage(System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
     public sealed class LoggingPayloadPropertyNameAttribute : System.Attribute
     {
         public string PropertyName { get; }
@@ -684,7 +684,7 @@ namespace Microsoft.Extensions.Logging.Payloads
         }
     }
 
-    [System.AttributeUsage(System.AttributeTargets.Enum | System.AttributeTargets.Property | System.AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [System.AttributeUsage(System.AttributeTargets.Enum | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
     public sealed class LoggingPayloadStringEnumAttribute : System.Attribute
     {
         public bool WriteUnknownEnumValuesAsNumeric { get; set; }

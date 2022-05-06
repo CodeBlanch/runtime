@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.Extensions.Logging.Payloads;
 
-[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
 public sealed class LoggingPayloadNumericEnumAttribute : Attribute
 {
 }

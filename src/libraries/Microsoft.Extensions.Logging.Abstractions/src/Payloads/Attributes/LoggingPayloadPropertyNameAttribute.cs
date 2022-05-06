@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.Extensions.Logging.Payloads;
 
-[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
 public sealed class LoggingPayloadPropertyNameAttribute : Attribute
 {
     public string PropertyName { get; }
