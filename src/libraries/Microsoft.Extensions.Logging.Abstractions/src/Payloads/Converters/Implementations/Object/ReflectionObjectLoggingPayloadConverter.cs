@@ -2,14 +2,53 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace Microsoft.Extensions.Logging.Payloads;
 
-internal sealed class ReflectionObjectLoggingPayloadConverter<TObject> : LoggingPayloadConverter<TObject>
+internal sealed class ReflectionObjectLoggingPayloadConverter<
+    [DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties
+        | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)]
+TObject> : ObjectLoggingPayloadConverter<TObject>
 {
-    public override void Write(in TObject value, ref LoggingPayloadWriter writer)
+    protected override LoggingPayloadFieldWriter BuildPropertyWriter(
+        Type rootType,
+        MethodInfo? getMethod = null,
+        FieldInfo? fieldInfo = null)
     {
-        // TODO: Implement.
-        throw new NotImplementedException();
+        Debug.Assert((getMethod != null && fieldInfo == null) || (getMethod == null && fieldInfo != null));
+
+        return getMethod != null
+        ? (
+            in TObject value,
+            ref LoggingPayloadWriter writer,
+            ObjectLoggingPayloadConverterHelper.WriteFieldOptions writeFieldOptions,
+            LoggingPayloadSerializerOptions serializerOptions) =>
+            {
+                object? fieldValue = getMethod.Invoke(value, null);
+
+                ObjectLoggingPayloadConverterHelper.WriteFieldObject(
+                    in fieldValue,
+                    ref writer,
+                    writeFieldOptions,
+                    serializerOptions);
+            }
+        : (
+            in TObject value,
+            ref LoggingPayloadWriter writer,
+            ObjectLoggingPayloadConverterHelper.WriteFieldOptions writeFieldOptions,
+            LoggingPayloadSerializerOptions serializerOptions) =>
+            {
+                object? fieldValue = fieldInfo!.GetValue(value);
+
+                ObjectLoggingPayloadConverterHelper.WriteFieldObject(
+                    in fieldValue,
+                    ref writer,
+                    writeFieldOptions,
+                    serializerOptions);
+            };
     }
 }
