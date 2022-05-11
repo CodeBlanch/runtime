@@ -72,17 +72,6 @@ public static class LoggingPayloadMetadataServices
 
     public static LoggingPayloadConverter<Uri> UriConverter => s_UriConverter ??= new ToStringLoggingPayloadConverter<Uri>();
 
-    public static LoggingPayloadConverter<T[]> CreateArrayConverter<T>()
-        => new ArrayLoggingPayloadConverter<T>();
-
-    public static LoggingPayloadConverter<TEnumerable> CreateEnumerableConverter<TEnumerable, TItem>()
-        where TEnumerable : IEnumerable<TItem>
-        => new EnumerableLoggingPayloadConverter<TEnumerable, TItem>();
-
-    public static LoggingPayloadConverter<TDictionary> CreateDictionaryConverter<TDictionary, TValue>()
-        where TDictionary : IEnumerable<KeyValuePair<string, TValue>>
-        => new DictionaryLoggingPayloadConverter<TDictionary, TValue>();
-
     public static LoggingPayloadConverter<TObject> CreateObjectConverter<
         [DynamicallyAccessedMembers(
             DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties

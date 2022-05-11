@@ -611,11 +611,6 @@ namespace Microsoft.Extensions.Logging.Payloads
         public static LoggingPayloadConverter<System.Version> VersionConverter { get; }
         public static LoggingPayloadConverter<System.Uri> UriConverter { get; }
 
-        public static LoggingPayloadConverter<T[]> CreateArrayConverter<T>() => throw null;
-        public static LoggingPayloadConverter<TEnumerable> CreateEnumerableConverter<TEnumerable, TItem>()
-            where TEnumerable : System.Collections.Generic.IEnumerable<TItem> => throw null;
-        public static LoggingPayloadConverter<TDictionary> CreateDictionaryConverter<TDictionary, TValue>()
-            where TDictionary : System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, TValue>> => throw null;
         public static LoggingPayloadConverter<TObject> CreateObjectConverter<
             [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(
                 System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.NonPublicProperties
