@@ -484,9 +484,10 @@ public ref partial struct LoggingPayloadWriter
         EndPropertyInternal();
     }
 
-    public void WriteProperty<T>(
+    public void WritePropertyArray<T>(
         string propertyName,
-        IEnumerable<T>? value)
+        T[]? value,
+        LoggingPayloadConverter<T>? converter = null)
     {
         if (value is null)
         {
@@ -494,11 +495,43 @@ public ref partial struct LoggingPayloadWriter
         }
         else
         {
-            LoggingPayloadWriter writer = new(_Target, Options);
+            BeginProperty(propertyName);
+            WriteValueArray(value, converter);
+            EndPropertyInternal();
+        }
+    }
 
-            writer.BeginProperty(propertyName);
-            LoggingPayloadSerializer.SerializeInternal(in value, ref writer);
-            writer.EndPropertyInternal();
+    public void WritePropertyDictionary<T>(
+        string propertyName,
+        IEnumerable<KeyValuePair<string, T>>? value,
+        LoggingPayloadConverter<T>? converter = null)
+    {
+        if (value is null)
+        {
+            HandleNullProperty(propertyName);
+        }
+        else
+        {
+            BeginProperty(propertyName);
+            WriteValueDictionary(value, converter);
+            EndPropertyInternal();
+        }
+    }
+
+    public void WritePropertyEnumerable<T>(
+        string propertyName,
+        IEnumerable<T>? value,
+        LoggingPayloadConverter<T>? converter = null)
+    {
+        if (value is null)
+        {
+            HandleNullProperty(propertyName);
+        }
+        else
+        {
+            BeginProperty(propertyName);
+            WriteValueEnumerable(value, converter);
+            EndPropertyInternal();
         }
     }
 

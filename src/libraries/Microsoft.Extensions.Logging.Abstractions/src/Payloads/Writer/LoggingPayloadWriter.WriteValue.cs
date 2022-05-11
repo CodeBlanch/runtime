@@ -144,7 +144,31 @@ public ref partial struct LoggingPayloadWriter
         WriteValueInternal(value);
     }
 
-    public void WriteValue<T>(
+    public void WriteValueArray<T>(
+        T[] value,
+        LoggingPayloadConverter<T>? converter = null)
+    {
+        if (value is null)
+            throw new ArgumentNullException(nameof(value));
+
+        LoggingPayloadWriter writer = new(_Target, Options);
+
+        EnumerableLoggingPayloadConverterHelper.WriteArray(value, ref writer, converter);
+    }
+
+    public void WriteValueDictionary<T>(
+        IEnumerable<KeyValuePair<string, T>>? value,
+        LoggingPayloadConverter<T>? converter = null)
+    {
+        if (value is null)
+            throw new ArgumentNullException(nameof(value));
+
+        LoggingPayloadWriter writer = new(_Target, Options);
+
+        EnumerableLoggingPayloadConverterHelper.WriteDictionary(in value, ref writer, converter);
+    }
+
+    public void WriteValueEnumerable<T>(
         IEnumerable<T> value,
         LoggingPayloadConverter<T>? converter = null)
     {

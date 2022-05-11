@@ -14,6 +14,115 @@ namespace Microsoft.Extensions.Logging.Payloads;
 
 internal static class EnumerableLoggingPayloadConverterHelper
 {
+    public static void WriteArray<T>(T[] value, ref LoggingPayloadWriter writer, LoggingPayloadConverter<T>? converter = null)
+    {
+        Debug.Assert(value != null);
+
+        LoggingPayloadWriterState state = writer.State;
+
+        uint maxLength = (uint)writer.Options.EffectiveMaxArrayLength;
+
+        TypeInspector<T> typeInspector = TypeInspector<T>.Inspector;
+
+        writer.BeginArray(typeof(T).Name);
+
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (state.ChildItemCount >= maxLength)
+                break;
+
+            ref readonly T item = ref value[i];
+
+            if (typeInspector.IsNull(in item!))
+            {
+                writer.BeginValueInternal();
+                writer.WriteNullValueInternal();
+            }
+            else
+            {
+                LoggingPayloadSerializer.SerializeInternal(in item, ref writer);
+            }
+        }
+
+        writer.EndArray();
+    }
+
+    public static void WriteDictionary<TDictionary, TValue>(in TDictionary value, ref LoggingPayloadWriter writer, LoggingPayloadConverter<TValue>? converter = null)
+        where TDictionary : IEnumerable<KeyValuePair<string, TValue>>
+    {
+        Debug.Assert(value != null);
+
+        LoggingPayloadWriterState state = writer.State;
+
+        uint maxCount = (uint)writer.Options.EffectiveMaxPropertyCount;
+
+        TypeInspector<TValue> typeInspector = TypeInspector<TValue>.Inspector;
+
+        writer.BeginObject();
+
+        /* Note: Some unavoidable copying of value types going on in here.
+        Something like this would help:
+        https://github.com/dotnet/runtime/issues/58333#issuecomment-907877948 */
+
+        if (value is Dictionary<string, TValue> dictionary)
+        {
+            // Note: This is to utilize the struct enumerator on concrete Dictionary.
+            foreach (KeyValuePair<string, TValue> item in dictionary)
+            {
+                if (string.IsNullOrEmpty(item.Key))
+                    continue;
+
+                if (state.ChildItemCount >= maxCount)
+                    break;
+
+                TValue itemValue = item.Value;
+
+                if (writer.HandledAsNullOrIgnoredInternal(typeInspector, in itemValue, item.Key))
+                    continue;
+
+                writer.BeginPropertyInternal(item.Key);
+                if (converter != null)
+                {
+                    converter.Write(in itemValue, ref writer);
+                }
+                else
+                {
+                    LoggingPayloadSerializer.SerializeInternal(in itemValue, ref writer);
+                }
+                writer.EndPropertyInternal();
+            }
+        }
+        else
+        {
+            foreach (KeyValuePair<string, TValue> item in value)
+            {
+                if (string.IsNullOrEmpty(item.Key))
+                    continue;
+
+                if (state.ChildItemCount >= maxCount)
+                    break;
+
+                TValue itemValue = item.Value;
+
+                if (writer.HandledAsNullOrIgnoredInternal(typeInspector, in itemValue, item.Key))
+                    continue;
+
+                writer.BeginPropertyInternal(item.Key);
+                if (converter != null)
+                {
+                    converter.Write(in itemValue, ref writer);
+                }
+                else
+                {
+                    LoggingPayloadSerializer.SerializeInternal(in itemValue, ref writer);
+                }
+                writer.EndPropertyInternal();
+            }
+        }
+
+        writer.EndObject();
+    }
+
     public static void WriteEnumerable<TEnumerable, TItem>(in TEnumerable value, ref LoggingPayloadWriter writer, LoggingPayloadConverter<TItem>? converter = null)
         where TEnumerable : IEnumerable<TItem>
     {

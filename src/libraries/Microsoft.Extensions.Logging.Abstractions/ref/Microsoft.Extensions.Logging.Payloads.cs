@@ -424,9 +424,22 @@ namespace Microsoft.Extensions.Logging.Payloads
             Microsoft.Extensions.Logging.Payloads.LoggingPayloadMaskOptions? maskOptions = null)
         {
         }
-        public void WriteProperty<T>(
+        public void WritePropertyArray<T>(
             string propertyName,
-            System.Collections.Generic.IEnumerable<T>? value)
+            T[]? value,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
+        {
+        }
+        public void WritePropertyDictionary<T>(
+            string propertyName,
+            System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, T>>? value,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
+        {
+        }
+        public void WritePropertyEnumerable<T>(
+            string propertyName,
+            System.Collections.Generic.IEnumerable<T>? value,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
         {
         }
         public void WritePropertyObject<T>(
@@ -482,7 +495,17 @@ namespace Microsoft.Extensions.Logging.Payloads
             Microsoft.Extensions.Logging.Payloads.LoggingPayloadMaskOptions? maskOptions = null)
         {
         }
-        public void WriteValue<T>(
+        public void WriteValueArray<T>(
+            T[] value,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
+        {
+        }
+        public void WriteValueDictionary<T>(
+            System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, T>>? value,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
+        {
+        }
+        public void WriteValueEnumerable<T>(
             System.Collections.Generic.IEnumerable<T> value,
             Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
         {
