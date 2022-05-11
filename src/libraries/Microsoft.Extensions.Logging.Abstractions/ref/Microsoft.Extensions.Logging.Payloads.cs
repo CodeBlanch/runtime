@@ -483,19 +483,17 @@ namespace Microsoft.Extensions.Logging.Payloads
         {
         }
         public void WriteValue<T>(
-            string propertyName,
-            System.Collections.Generic.IEnumerable<T> value)
+            System.Collections.Generic.IEnumerable<T> value,
+            Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
         {
         }
         public void WriteValueObject<T>(
-            string propertyName,
             T value,
             Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
             where T : class
         {
         }
         public void WriteValueStruct<T>(
-            string propertyName,
             in T value,
             Microsoft.Extensions.Logging.Payloads.LoggingPayloadConverter<T>? converter = null)
             where T : struct

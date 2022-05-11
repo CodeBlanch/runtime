@@ -145,20 +145,18 @@ public ref partial struct LoggingPayloadWriter
     }
 
     public void WriteValue<T>(
-        string propertyName,
-        IEnumerable<T> value)
+        IEnumerable<T> value,
+        LoggingPayloadConverter<T>? converter = null)
     {
         if (value is null)
             throw new ArgumentNullException(nameof(value));
 
         LoggingPayloadWriter writer = new(_Target, Options);
 
-        writer.BeginValue();
-        LoggingPayloadSerializer.SerializeInternal(in value, ref writer);
+        EnumerableLoggingPayloadConverterHelper.WriteEnumerable(in value, ref writer, converter);
     }
 
     public void WriteValueObject<T>(
-        string propertyName,
         T value,
         LoggingPayloadConverter<T>? converter = null)
         where T : class
@@ -181,7 +179,6 @@ public ref partial struct LoggingPayloadWriter
     }
 
     public void WriteValueStruct<T>(
-        string propertyName,
         in T value,
         LoggingPayloadConverter<T>? converter = null)
         where T : struct
