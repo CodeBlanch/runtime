@@ -21,37 +21,7 @@ public class LoggingPayloadSerializerOptions
     private const int DefaultMaxArrayLength = 64;
     private const int DefaultMaxPropertyCount = 64;
 
-    private readonly ConcurrentDictionary<Type, LoggingPayloadConverter> _RegisteredLoggingPayloadConverters = new()
-    {
-        [typeof(string)] = new StringLoggingPayloadConverter(),
-        [typeof(int)] = new Int32LoggingPayloadConverter(),
-        [typeof(uint)] = new UInt32LoggingPayloadConverter(),
-        [typeof(long)] = new Int64LoggingPayloadConverter(),
-        [typeof(ulong)] = new UInt64LoggingPayloadConverter(),
-        [typeof(short)] = new Int16LoggingPayloadConverter(),
-        [typeof(ushort)] = new UInt16LoggingPayloadConverter(),
-        [typeof(byte)] = new ByteLoggingPayloadConverter(),
-        [typeof(sbyte)] = new SByteLoggingPayloadConverter(),
-        [typeof(char)] = new CharLoggingPayloadConverter(),
-        [typeof(float)] = new SingleLoggingPayloadConverter(),
-        [typeof(double)] = new DoubleLoggingPayloadConverter(),
-        [typeof(decimal)] = new DecimalLoggingPayloadConverter(),
-        [typeof(byte[])] = new ByteArrayLoggingPayloadConverter(),
-        [typeof(bool)] = new BooleanLoggingPayloadConverter(),
-
-#if NET6_0_OR_GREATER
-        [typeof(DateOnly)] = LoggingPayloadMetadataServices.DateOnlyConverter,
-#endif
-        [typeof(DateTime)] = LoggingPayloadMetadataServices.DateTimeConverter,
-        [typeof(DateTimeOffset)] = LoggingPayloadMetadataServices.DateTimeOffsetConverter,
-        [typeof(Guid)] = LoggingPayloadMetadataServices.GuidConverter,
-#if NET6_0_OR_GREATER
-        [typeof(TimeOnly)] = LoggingPayloadMetadataServices.TimeOnlyConverter,
-#endif
-        [typeof(TimeSpan)] = LoggingPayloadMetadataServices.TimeSpanConverter,
-        [typeof(Version)] = LoggingPayloadMetadataServices.VersionConverter,
-        [typeof(Uri)] = LoggingPayloadMetadataServices.UriConverter,
-    };
+    private readonly ConcurrentDictionary<Type, LoggingPayloadConverter> _RegisteredLoggingPayloadConverters;
 
     private Func<LoggingPayloadWriteTarget>? _DefaultWriteTargetFactory;
     private int _MaxDepth;
@@ -67,6 +37,45 @@ public class LoggingPayloadSerializerOptions
     private LoggingPayloadSerializerOptions(bool isDefaultInstance)
     {
         IsDefaultInstance = isDefaultInstance;
+
+        if (isDefaultInstance)
+        {
+            _RegisteredLoggingPayloadConverters = new()
+            {
+                [typeof(string)] = new StringLoggingPayloadConverter(),
+                [typeof(int)] = new Int32LoggingPayloadConverter(),
+                [typeof(uint)] = new UInt32LoggingPayloadConverter(),
+                [typeof(long)] = new Int64LoggingPayloadConverter(),
+                [typeof(ulong)] = new UInt64LoggingPayloadConverter(),
+                [typeof(short)] = new Int16LoggingPayloadConverter(),
+                [typeof(ushort)] = new UInt16LoggingPayloadConverter(),
+                [typeof(byte)] = new ByteLoggingPayloadConverter(),
+                [typeof(sbyte)] = new SByteLoggingPayloadConverter(),
+                [typeof(char)] = new CharLoggingPayloadConverter(),
+                [typeof(float)] = new SingleLoggingPayloadConverter(),
+                [typeof(double)] = new DoubleLoggingPayloadConverter(),
+                [typeof(decimal)] = new DecimalLoggingPayloadConverter(),
+                [typeof(byte[])] = new ByteArrayLoggingPayloadConverter(),
+                [typeof(bool)] = new BooleanLoggingPayloadConverter(),
+
+#if NET6_0_OR_GREATER
+                [typeof(DateOnly)] = LoggingPayloadMetadataServices.DateOnlyConverter,
+#endif
+                [typeof(DateTime)] = LoggingPayloadMetadataServices.DateTimeConverter,
+                [typeof(DateTimeOffset)] = LoggingPayloadMetadataServices.DateTimeOffsetConverter,
+                [typeof(Guid)] = LoggingPayloadMetadataServices.GuidConverter,
+#if NET6_0_OR_GREATER
+                [typeof(TimeOnly)] = LoggingPayloadMetadataServices.TimeOnlyConverter,
+#endif
+                [typeof(TimeSpan)] = LoggingPayloadMetadataServices.TimeSpanConverter,
+                [typeof(Version)] = LoggingPayloadMetadataServices.VersionConverter,
+                [typeof(Uri)] = LoggingPayloadMetadataServices.UriConverter,
+            };
+        }
+        else
+        {
+            _RegisteredLoggingPayloadConverters = new();
+        }
     }
 
     public bool IsDefaultInstance { get; }
