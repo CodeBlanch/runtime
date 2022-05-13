@@ -58,7 +58,7 @@ internal static class EnumerableLoggingPayloadConverterHelper
 
         TypeInspector<TValue> typeInspector = TypeInspector<TValue>.Inspector;
 
-        writer.BeginObject();
+        writer.BeginObject(typeof(TDictionary).Name);
 
         /* Note: Some unavoidable copying of value types going on in here.
         Something like this would help:
