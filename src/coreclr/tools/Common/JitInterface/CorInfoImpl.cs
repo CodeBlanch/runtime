@@ -195,8 +195,7 @@ namespace Internal.JitInterface
             bool hasTypeHistogram = false;
             foreach (var elem in pgoData)
             {
-                if (elem.InstrumentationKind == PgoInstrumentationKind.TypeHandleHistogramIntCount ||
-                    elem.InstrumentationKind == PgoInstrumentationKind.TypeHandleHistogramLongCount)
+                if (elem.InstrumentationKind == PgoInstrumentationKind.HandleHistogramTypes)
                 {
                     // found histogram
                     hasTypeHistogram = true;
@@ -218,10 +217,12 @@ namespace Internal.JitInterface
 
                 ComputeJitPgoInstrumentationSchema(LocalObjectToHandle, pgoData, out var nativeSchema, out var instrumentationData);
 
-                for (int i = 0; i < (pgoData.Length); i++)
+                for (int i = 0; i < pgoData.Length; i++)
                 {
-                    if (pgoData[i].InstrumentationKind == PgoInstrumentationKind.TypeHandleHistogramIntCount ||
-                        pgoData[i].InstrumentationKind == PgoInstrumentationKind.TypeHandleHistogramLongCount)
+                    if ((i + 1 < pgoData.Length) &&
+                        (pgoData[i].InstrumentationKind == PgoInstrumentationKind.HandleHistogramIntCount ||
+                         pgoData[i].InstrumentationKind == PgoInstrumentationKind.HandleHistogramLongCount) &&
+                        (pgoData[i + 1].InstrumentationKind == PgoInstrumentationKind.HandleHistogramTypes))
                     {
                         PgoSchemaElem? newElem = ComputeLikelyClass(i, handleToObject, nativeSchema, instrumentationData, compilationModuleGroup);
                         if (newElem.HasValue)
@@ -474,8 +475,6 @@ namespace Internal.JitInterface
 
             _methodCodeNode.InitializeLocalTypes(localTypes);
 #endif
-
-            PublishProfileData();
         }
 
         private void PublishROData()
@@ -494,8 +493,6 @@ namespace Internal.JitInterface
 
             _roDataBlob.InitializeData(objectData);
         }
-
-        partial void PublishProfileData();
 
         private MethodDesc MethodBeingCompiled
         {
@@ -569,7 +566,6 @@ namespace Internal.JitInterface
             _lastException = null;
 
 #if READYTORUN
-            _profileDataNode = null;
             _inlinedMethods = new ArrayBuilder<MethodDesc>();
             _actualInstructionSetSupported = default(InstructionSetFlags);
             _actualInstructionSetUnsupported = default(InstructionSetFlags);
@@ -3627,7 +3623,7 @@ namespace Internal.JitInterface
 
 #if READYTORUN
                 case BlockType.BBCounts:
-                    relocTarget = _profileDataNode;
+                    relocTarget = null;
                     break;
 #endif
 
@@ -3808,7 +3804,7 @@ namespace Internal.JitInterface
                 flags.Set(CorJitFlag.CORJIT_FLAG_MIN_OPT);
             }
 
-            if (this.MethodBeingCompiled.Context.Target.Abi == TargetAbi.CoreRTArmel)
+            if (this.MethodBeingCompiled.Context.Target.Abi == TargetAbi.NativeAotArmel)
             {
                 flags.Set(CorJitFlag.CORJIT_FLAG_SOFTFP_ABI);
             }
@@ -3866,6 +3862,10 @@ namespace Internal.JitInterface
                             if (typeVal.AsType != null && (typeFilter == null || typeFilter(typeVal.AsType)))
                             {
                                 ptrVal = (IntPtr)objectToHandle(typeVal.AsType);
+                            }
+                            else if (typeVal.AsMethod != null)
+                            {
+                                ptrVal = (IntPtr)objectToHandle(typeVal.AsMethod);
                             }
                             else
                             {
