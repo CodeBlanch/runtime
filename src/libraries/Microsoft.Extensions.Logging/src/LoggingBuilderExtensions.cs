@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -59,6 +62,50 @@ namespace Microsoft.Extensions.Logging
         {
             builder.Services.Configure(action);
             return builder;
+        }
+
+        /// <summary>
+        /// Adds the given scope values as a <see cref="IGlobalScopeProvider"/> to the <see cref="ILoggingBuilder"/>
+        /// </summary>
+        /// <param name="builder">The <see cref="ILoggingBuilder"/> to add the <see cref="IGlobalScopeProvider"/> to.</param>
+        /// <param name="values">The values to return as a global scope.</param>
+        /// <returns>The <see cref="ILoggingBuilder"/> so that additional calls can be chained.</returns>
+        public static ILoggingBuilder AddGlobalScopeValues(this ILoggingBuilder builder, IReadOnlyDictionary<string, object?> values)
+        {
+            ThrowHelper.ThrowIfNull(values);
+
+            builder.Services.AddSingleton<IGlobalScopeProvider>(new LoggerGlobalScopeValuesProvider(values));
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds the given <see cref="IGlobalScopeProvider"/> to the <see cref="ILoggingBuilder"/>
+        /// </summary>
+        /// <typeparam name="T">The global scope provider type.</typeparam>
+        /// <param name="builder">The <see cref="ILoggingBuilder"/> to add the <typeparamref name="T"/> to.</param>
+        /// <returns>The <see cref="ILoggingBuilder"/> so that additional calls can be chained.</returns>
+        public static ILoggingBuilder AddGlobalScopeProvider<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        T>(this ILoggingBuilder builder)
+            where T : class, IGlobalScopeProvider
+        {
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGlobalScopeProvider, T>());
+            return builder;
+        }
+
+        private sealed class LoggerGlobalScopeValuesProvider : IGlobalScopeProvider
+        {
+            private readonly List<KeyValuePair<string, object?>> _values;
+
+            public LoggerGlobalScopeValuesProvider(IReadOnlyDictionary<string, object?> values)
+            {
+                _values = values.ToList();
+            }
+
+            public void ForEachScope<TState>(Action<object?, TState> callback, TState state)
+            {
+                callback(_values, state);
+            }
         }
     }
 }

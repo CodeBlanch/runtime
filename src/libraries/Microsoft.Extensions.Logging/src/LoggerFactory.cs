@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -17,6 +18,7 @@ namespace Microsoft.Extensions.Logging
         private readonly Dictionary<string, Logger> _loggers = new Dictionary<string, Logger>(StringComparer.Ordinal);
         private readonly List<ProviderRegistration> _providerRegistrations = new List<ProviderRegistration>();
         private readonly object _sync = new object();
+        private readonly IGlobalScopeProvider[] _globalScopeProviders;
         private volatile bool _disposed;
         private IDisposable? _changeTokenRegistration;
         private LoggerFilterOptions _filterOptions;
@@ -73,7 +75,13 @@ namespace Microsoft.Extensions.Logging
         /// <param name="filterOption">The filter option to use.</param>
         /// <param name="options">The <see cref="LoggerFactoryOptions"/>.</param>
         /// <param name="scopeProvider">The <see cref="IExternalScopeProvider"/>.</param>
-        public LoggerFactory(IEnumerable<ILoggerProvider> providers, IOptionsMonitor<LoggerFilterOptions> filterOption, IOptions<LoggerFactoryOptions>? options = null, IExternalScopeProvider? scopeProvider = null)
+        /// <param name="globalScopeProviders">The global scope providers to use.</param>
+        public LoggerFactory(
+            IEnumerable<ILoggerProvider> providers,
+            IOptionsMonitor<LoggerFilterOptions> filterOption,
+            IOptions<LoggerFactoryOptions>? options = null,
+            IExternalScopeProvider? scopeProvider = null,
+            IEnumerable<IGlobalScopeProvider>? globalScopeProviders = null)
         {
             _scopeProvider = scopeProvider;
 
@@ -88,6 +96,16 @@ namespace Microsoft.Extensions.Logging
             {
                 throw new ArgumentException(SR.Format(SR.InvalidActivityTrackingOptions, _factoryOptions.ActivityTrackingOptions), nameof(options));
             }
+
+            globalScopeProviders ??= Array.Empty<IGlobalScopeProvider>();
+
+            if (_factoryOptions.ActivityTrackingOptions != ActivityTrackingOptions.None)
+            {
+                globalScopeProviders = globalScopeProviders.Concat(
+                    new IGlobalScopeProvider[] { new LoggerActivityTrackingGlobalScopeProvider(_factoryOptions.ActivityTrackingOptions) });
+            }
+
+            _globalScopeProviders = globalScopeProviders.ToArray();
 
             foreach (ILoggerProvider provider in providers)
             {
@@ -197,7 +215,7 @@ namespace Microsoft.Extensions.Logging
             {
                 if (_scopeProvider == null)
                 {
-                    _scopeProvider = new LoggerFactoryScopeProvider(_factoryOptions.ActivityTrackingOptions);
+                    _scopeProvider = new LoggerExternalScopeProvider(_globalScopeProviders);
                 }
 
                 supportsExternalScope.SetScopeProvider(_scopeProvider);

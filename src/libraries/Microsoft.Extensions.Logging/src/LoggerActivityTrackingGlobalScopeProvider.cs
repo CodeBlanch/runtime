@@ -1,78 +1,61 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Text;
-using System.Threading;
 using System.Collections;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 
 namespace Microsoft.Extensions.Logging
 {
-    /// <summary>
-    /// Default implementation of <see cref="IExternalScopeProvider"/>
-    /// </summary>
-    internal sealed class LoggerFactoryScopeProvider : IExternalScopeProvider
+    internal sealed class LoggerActivityTrackingGlobalScopeProvider : IGlobalScopeProvider
     {
-        private readonly AsyncLocal<Scope?> _currentScope = new AsyncLocal<Scope?>();
-        private readonly ActivityTrackingOptions _activityTrackingOption;
+        private readonly ActivityTrackingOptions _activityTrackingOptions;
 
-        public LoggerFactoryScopeProvider(ActivityTrackingOptions activityTrackingOption) => _activityTrackingOption = activityTrackingOption;
+        public LoggerActivityTrackingGlobalScopeProvider(ActivityTrackingOptions activityTrackingOptions)
+        {
+            _activityTrackingOptions = activityTrackingOptions;
+        }
 
         public void ForEachScope<TState>(Action<object?, TState> callback, TState state)
         {
-            void Report(Scope? current)
+            Activity? activity = Activity.Current;
+            if (activity != null)
             {
-                if (current == null)
+                const string propertyKey = "__ActivityLogScope__";
+
+                ActivityLogScope? activityLogScope = activity.GetCustomProperty(propertyKey) as ActivityLogScope;
+                if (activityLogScope == null)
                 {
-                    return;
+                    activityLogScope = new ActivityLogScope(activity, _activityTrackingOptions);
+                    activity.SetCustomProperty(propertyKey, activityLogScope);
                 }
-                Report(current.Parent);
-                callback(current.State, state);
-            }
 
-            if (_activityTrackingOption != ActivityTrackingOptions.None)
-            {
-                Activity? activity = Activity.Current;
-                if (activity != null)
+                callback(activityLogScope, state);
+
+                // Tags and baggage are opt-in and thus we assume that most of the time it will not be used.
+                if ((_activityTrackingOptions & ActivityTrackingOptions.Tags) != 0
+                    && activity.TagObjects.GetEnumerator().MoveNext())
                 {
-                    const string propertyKey = "__ActivityLogScope__";
+                    // As TagObjects is a IEnumerable<KeyValuePair<string, object?>> this can be used directly as a scope.
+                    // We do this to safe the allocation of a wrapper object.
+                    callback(activity.TagObjects, state);
+                }
 
-                    ActivityLogScope? activityLogScope = activity.GetCustomProperty(propertyKey) as ActivityLogScope;
-                    if (activityLogScope == null)
+                if ((_activityTrackingOptions & ActivityTrackingOptions.Baggage) != 0)
+                {
+                    // Only access activity.Baggage as every call leads to an allocation
+                    IEnumerable<KeyValuePair<string, string?>> baggage = activity.Baggage;
+                    if (baggage.GetEnumerator().MoveNext())
                     {
-                        activityLogScope = new ActivityLogScope(activity, _activityTrackingOption);
-                        activity.SetCustomProperty(propertyKey, activityLogScope);
-                    }
-
-                    callback(activityLogScope, state);
-
-                    // Tags and baggage are opt-in and thus we assume that most of the time it will not be used.
-                    if ((_activityTrackingOption & ActivityTrackingOptions.Tags) != 0
-                        && activity.TagObjects.GetEnumerator().MoveNext())
-                    {
-                        // As TagObjects is a IEnumerable<KeyValuePair<string, object?>> this can be used directly as a scope.
-                        // We do this to safe the allocation of a wrapper object.
-                        callback(activity.TagObjects, state);
-                    }
-
-                    if ((_activityTrackingOption & ActivityTrackingOptions.Baggage) != 0)
-                    {
-                        // Only access activity.Baggage as every call leads to an allocation
-                        IEnumerable<KeyValuePair<string, string?>> baggage = activity.Baggage;
-                        if (baggage.GetEnumerator().MoveNext())
-                        {
-                            // For the baggage a wrapper object is necessary because we need to be able to overwrite ToString().
-                            // In contrast to the TagsObject, Baggage doesn't have one underlining type where we can do this overwrite.
-                            ActivityBaggageLogScopeWrapper scope = GetOrCreateActivityBaggageLogScopeWrapper(activity, baggage);
-                            callback(scope, state);
-                        }
+                        // For the baggage a wrapper object is necessary because we need to be able to overwrite ToString().
+                        // In contrast to the TagsObject, Baggage doesn't have one underlining type where we can do this overwrite.
+                        ActivityBaggageLogScopeWrapper scope = GetOrCreateActivityBaggageLogScopeWrapper(activity, baggage);
+                        callback(scope, state);
                     }
                 }
             }
-
-            Report(_currentScope.Value);
         }
 
         private static ActivityBaggageLogScopeWrapper GetOrCreateActivityBaggageLogScopeWrapper(Activity activity, IEnumerable<KeyValuePair<string, string?>> items)
@@ -86,46 +69,6 @@ namespace Microsoft.Extensions.Logging
             }
 
             return activityBaggageLogScopeWrapper;
-        }
-
-        public IDisposable Push(object? state)
-        {
-            Scope? parent = _currentScope.Value;
-            var newScope = new Scope(this, state, parent);
-            _currentScope.Value = newScope;
-
-            return newScope;
-        }
-
-        private sealed class Scope : IDisposable
-        {
-            private readonly LoggerFactoryScopeProvider _provider;
-            private bool _isDisposed;
-
-            internal Scope(LoggerFactoryScopeProvider provider, object? state, Scope? parent)
-            {
-                _provider = provider;
-                State = state;
-                Parent = parent;
-            }
-
-            public Scope? Parent { get; }
-
-            public object? State { get; }
-
-            public override string? ToString()
-            {
-                return State?.ToString();
-            }
-
-            public void Dispose()
-            {
-                if (!_isDisposed)
-                {
-                    _provider._currentScope.Value = Parent;
-                    _isDisposed = true;
-                }
-            }
         }
 
         private sealed class ActivityLogScope : IReadOnlyList<KeyValuePair<string, object?>>

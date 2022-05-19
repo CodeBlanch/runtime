@@ -12,12 +12,22 @@ namespace Microsoft.Extensions.Logging
     public class LoggerExternalScopeProvider : IExternalScopeProvider
     {
         private readonly AsyncLocal<Scope?> _currentScope = new AsyncLocal<Scope?>();
+        private readonly IGlobalScopeProvider[]? _globalScopeProviders;
 
         /// <summary>
         /// Creates a new <see cref="LoggerExternalScopeProvider"/>.
         /// </summary>
         public LoggerExternalScopeProvider()
         { }
+
+        /// <summary>
+        /// Creates a new <see cref="LoggerExternalScopeProvider"/>.
+        /// </summary>
+        /// <param name="globalScopeProviders">The <see cref="IGlobalScopeProvider"/>s to use when emitting scopes.</param>
+        public LoggerExternalScopeProvider(IGlobalScopeProvider[] globalScopeProviders)
+        {
+            _globalScopeProviders = globalScopeProviders;
+        }
 
         /// <inheritdoc />
         public void ForEachScope<TState>(Action<object?, TState> callback, TState state)
@@ -31,6 +41,15 @@ namespace Microsoft.Extensions.Logging
                 Report(current.Parent);
                 callback(current.State, state);
             }
+
+            if (_globalScopeProviders != null)
+            {
+                foreach (IGlobalScopeProvider globalScopeProvider in _globalScopeProviders)
+                {
+                    globalScopeProvider.ForEachScope(callback, state);
+                }
+            }
+
             Report(_currentScope.Value);
         }
 

@@ -26,6 +26,10 @@ namespace Microsoft.Extensions.Logging
         void ForEachScope<TState>(System.Action<object?, TState> callback, TState state);
         System.IDisposable Push(object? state);
     }
+    public partial interface IGlobalScopeProvider
+    {
+        void ForEachScope<TState>(System.Action<object?, TState> callback, TState state);
+    }
     public partial interface ILogger
     {
         System.IDisposable? BeginScope<TState>(TState state) where TState : notnull;
@@ -88,6 +92,7 @@ namespace Microsoft.Extensions.Logging
     public partial class LoggerExternalScopeProvider : Microsoft.Extensions.Logging.IExternalScopeProvider
     {
         public LoggerExternalScopeProvider() { }
+        public LoggerExternalScopeProvider(Microsoft.Extensions.Logging.IGlobalScopeProvider[] globalScopeProviders) { }
         public void ForEachScope<TState>(System.Action<object?, TState> callback, TState state) { }
         public System.IDisposable Push(object? state) { throw null; }
     }
