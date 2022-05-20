@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace Microsoft.Extensions.Logging
@@ -32,13 +33,13 @@ namespace Microsoft.Extensions.Logging
         /// <inheritdoc />
         public void ForEachScope<TState>(Action<object?, TState> callback, TState state)
         {
-            void Report(Scope? current)
+            static void Report(Scope? current, Action<object?, TState> callback, TState state)
             {
                 if (current == null)
                 {
                     return;
                 }
-                Report(current.Parent);
+                Report(current.Parent, callback, state);
                 callback(current.State, state);
             }
 
@@ -50,7 +51,7 @@ namespace Microsoft.Extensions.Logging
                 }
             }
 
-            Report(_currentScope.Value);
+            Report(_currentScope.Value, callback, state);
         }
 
         /// <inheritdoc />

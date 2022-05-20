@@ -93,6 +93,7 @@ namespace Microsoft.Extensions.Logging
         public static Microsoft.Extensions.Logging.ILoggingBuilder Configure(this Microsoft.Extensions.Logging.ILoggingBuilder builder, System.Action<Microsoft.Extensions.Logging.LoggerFactoryOptions> action) { throw null; }
         public static Microsoft.Extensions.Logging.ILoggingBuilder SetMinimumLevel(this Microsoft.Extensions.Logging.ILoggingBuilder builder, Microsoft.Extensions.Logging.LogLevel level) { throw null; }
         public static Microsoft.Extensions.Logging.ILoggingBuilder AddGlobalScopeValues(this Microsoft.Extensions.Logging.ILoggingBuilder builder, System.Collections.Generic.IReadOnlyDictionary<string, object?> values) { throw null; }
+        public static Microsoft.Extensions.Logging.ILoggingBuilder AddGlobalScopeFactory(this Microsoft.Extensions.Logging.ILoggingBuilder builder, params System.Func<System.Collections.Generic.KeyValuePair<string, object?>>[] valueFactories) { throw null; }
         public static Microsoft.Extensions.Logging.ILoggingBuilder AddGlobalScopeProvider<
         [System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]
         T>(this Microsoft.Extensions.Logging.ILoggingBuilder builder)
