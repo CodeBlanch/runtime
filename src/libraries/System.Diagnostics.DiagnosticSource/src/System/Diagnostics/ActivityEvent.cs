@@ -12,7 +12,7 @@ namespace System.Diagnostics
     public readonly struct ActivityEvent
     {
         private static readonly IEnumerable<KeyValuePair<string, object?>> s_emptyTags = Array.Empty<KeyValuePair<string, object?>>();
-        private readonly Activity.TagsLinkedList? _tags;
+        private readonly ActivityTagsCollection? _tags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActivityEvent"/> class.
@@ -33,7 +33,7 @@ namespace System.Diagnostics
             Name = name ?? string.Empty;
             Timestamp = timestamp != default ? timestamp : DateTimeOffset.UtcNow;
 
-            _tags = tags?.Count > 0 ? new Activity.TagsLinkedList(tags) : null;
+            _tags = tags;
         }
 
         /// <summary>
