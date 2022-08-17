@@ -1518,23 +1518,30 @@ namespace System.Diagnostics
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
-        internal sealed class TagsLinkedList : IEnumerable<KeyValuePair<string, object?>>
+        internal sealed class TagsLinkedList : IEnumerable<KeyValuePair<string, object?>>, ICollection
         {
             private DiagNode<KeyValuePair<string, object?>>? _first;
             private DiagNode<KeyValuePair<string, object?>>? _last;
 
             private StringBuilder? _stringBuilder;
 
-            public TagsLinkedList(KeyValuePair<string, object?> firstValue, bool set = false) => _last = _first = ((set && firstValue.Value == null) ? null : new DiagNode<KeyValuePair<string, object?>>(firstValue));
+            public TagsLinkedList(KeyValuePair<string, object?> firstValue, bool set = false)
+            {
+                _last = _first = ((set && firstValue.Value == null) ? null : new DiagNode<KeyValuePair<string, object?>>(firstValue));
+                Count = _first == null ? 0 : 1;
+            }
 
             public TagsLinkedList(IEnumerator<KeyValuePair<string, object?>> e)
             {
                 _last = _first = new DiagNode<KeyValuePair<string, object?>>(e.Current);
+                Count++;
 
                 while (e.MoveNext())
                 {
                     _last.Next = new DiagNode<KeyValuePair<string, object?>>(e.Current);
                     _last = _last.Next;
+
+                    Count++;
                 }
             }
 
@@ -1561,10 +1568,14 @@ namespace System.Diagnostics
                     _last = _last.Next;
                 }
 
+                Count++;
+
                 while (e.MoveNext())
                 {
                     _last.Next = new DiagNode<KeyValuePair<string, object?>>(e.Current);
                     _last = _last.Next;
+
+                    Count++;
                 }
             }
 
@@ -1577,13 +1588,16 @@ namespace System.Diagnostics
                     if (_first == null)
                     {
                         _first = _last = newNode;
-                        return;
+                    }
+                    else
+                    {
+                        Debug.Assert(_last != null);
+
+                        _last!.Next = newNode;
+                        _last = newNode;
                     }
 
-                    Debug.Assert(_last != null);
-
-                    _last!.Next = newNode;
-                    _last = newNode;
+                    Count++;
                 }
             }
 
@@ -1619,6 +1633,7 @@ namespace System.Diagnostics
                         {
                             _last = null;
                         }
+                        Count--;
                         return;
                     }
 
@@ -1633,6 +1648,7 @@ namespace System.Diagnostics
                                 _last = previous;
                             }
                             previous.Next = previous.Next.Next;
+                            Count--;
                             return;
                         }
                         previous = previous.Next;
@@ -1675,6 +1691,14 @@ namespace System.Diagnostics
                     _last = newNode;
                 }
             }
+
+            public int Count { get; private set; }
+
+            object ICollection.SyncRoot => this;
+
+            bool ICollection.IsSynchronized => false;
+
+            void ICollection.CopyTo(Array array, int index) => throw new NotSupportedException();
 
             public DiagEnumerator<KeyValuePair<string, object?>> GetEnumerator() => new DiagEnumerator<KeyValuePair<string, object?>>(_first);
             IEnumerator<KeyValuePair<string, object?>> IEnumerable<KeyValuePair<string, object?>>.GetEnumerator() => GetEnumerator();

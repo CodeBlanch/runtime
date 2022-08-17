@@ -14,24 +14,30 @@ namespace System.Diagnostics
     }
 
     // We are not using the public LinkedList<T> because we need to ensure thread safety operation on the list.
-    internal sealed class DiagLinkedList<T> : IEnumerable<T>
+    internal sealed class DiagLinkedList<T> : IEnumerable<T>, ICollection
     {
         private DiagNode<T>? _first;
         private DiagNode<T>? _last;
 
-        public DiagLinkedList() {}
+        public DiagLinkedList() { }
 
-        public DiagLinkedList(T firstValue) => _last = _first = new DiagNode<T>(firstValue);
+        public DiagLinkedList(T firstValue)
+        {
+            _last = _first = new DiagNode<T>(firstValue);
+            Count = 1;
+        }
 
         public DiagLinkedList(IEnumerator<T> e)
         {
             Debug.Assert(e is not null);
             _last = _first = new DiagNode<T>(e.Current);
+            Count++;
 
             while (e.MoveNext())
             {
                 _last.Next = new DiagNode<T>(e.Current);
                 _last = _last.Next;
+                Count++;
             }
         }
 
@@ -42,6 +48,8 @@ namespace System.Diagnostics
             lock (this)
             {
                 _first = _last = null;
+
+                Count = 0;
             }
         }
 
@@ -50,14 +58,17 @@ namespace System.Diagnostics
             if (_first is null)
             {
                 _first = _last = newNode;
-                return;
+            }
+            else
+            {
+                Debug.Assert(_first is not null);
+                Debug.Assert(_last is not null);
+
+                _last!.Next = newNode;
+                _last = newNode;
             }
 
-            Debug.Assert(_first is not null);
-            Debug.Assert(_last is not null);
-
-            _last!.Next = newNode;
-            _last = newNode;
+            Count++;
         }
 
         public void Add(T value)
@@ -109,6 +120,7 @@ namespace System.Diagnostics
                     {
                         _last = null;
                     }
+                    Count--;
                     return previous.Value;
                 }
 
@@ -123,7 +135,7 @@ namespace System.Diagnostics
                         {
                             _last = previous;
                         }
-
+                        Count--;
                         return current.Value;
                     }
 
@@ -143,8 +155,18 @@ namespace System.Diagnostics
             {
                 newNode.Next = _first;
                 _first = newNode;
+
+                Count++;
             }
         }
+
+        public int Count { get; private set; }
+
+        object ICollection.SyncRoot => this;
+
+        bool ICollection.IsSynchronized => false;
+
+        void ICollection.CopyTo(Array array, int index) => throw new NotSupportedException();
 
         public DiagEnumerator<T> GetEnumerator() => new DiagEnumerator<T>(_first);
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
