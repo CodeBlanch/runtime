@@ -14,7 +14,7 @@ namespace System.Diagnostics
     /// </summary>
     public readonly partial struct ActivityLink : IEquatable<ActivityLink>
     {
-        private readonly Activity.TagsLinkedList? _tags;
+        private readonly ActivityTagsCollection? _tags;
 
         /// <summary>
         /// Construct a new <see cref="ActivityLink"/> object which can be linked to an Activity object.
@@ -25,7 +25,7 @@ namespace System.Diagnostics
         {
             Context = context;
 
-            _tags = tags?.Count > 0 ? new Activity.TagsLinkedList(tags) : null;
+            _tags = tags;
         }
 
         /// <summary>

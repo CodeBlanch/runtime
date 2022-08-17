@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Collections;
-using System.Diagnostics.CodeAnalysis;
 
 namespace System.Diagnostics
 {
@@ -21,7 +20,10 @@ namespace System.Diagnostics
     /// </summary>
     public class ActivityTagsCollection : IDictionary<string, object?>
     {
-        private List<KeyValuePair<string, object?>> _list = new List<KeyValuePair<string, object?>>();
+        private DiagNode<KeyValuePair<string, object?>>? _first;
+        private DiagNode<KeyValuePair<string, object?>>? _last;
+
+        internal DiagNode<KeyValuePair<string, object?>>? First => _first;
 
         /// <summary>
         /// Create a new instance of the collection.
@@ -60,11 +62,7 @@ namespace System.Diagnostics
         /// <value>Object mapped to the key</value>
         public object? this[string key]
         {
-            get
-            {
-                int index = FindIndex(key);
-                return index < 0 ? null : _list[index].Value;
-            }
+            get => FindNode(key)?.Value.Value;
 
             set
             {
@@ -73,23 +71,20 @@ namespace System.Diagnostics
                     throw new ArgumentNullException(nameof(key));
                 }
 
-                int index = FindIndex(key);
                 if (value == null)
                 {
-                    if (index >= 0)
-                    {
-                        _list.RemoveAt(index);
-                    }
+                    Remove(key);
                     return;
                 }
 
-                if (index >= 0)
+                DiagNode<KeyValuePair<string, object?>>? node = FindNode(key);
+                if (node != null)
                 {
-                    _list[index] = new KeyValuePair<string, object?>(key, value);
+                    node.Value = new KeyValuePair<string, object?>(key, value);
                 }
                 else
                 {
-                    _list.Add(new KeyValuePair<string, object?>(key, value));
+                    Add(key, value);
                 }
             }
         }
@@ -101,8 +96,8 @@ namespace System.Diagnostics
         {
             get
             {
-                List<string> list = new List<string>(_list.Count);
-                foreach (KeyValuePair<string, object?> kvp in _list)
+                List<string> list = new List<string>(Count);
+                foreach (KeyValuePair<string, object?> kvp in this)
                 {
                     list.Add(kvp.Key);
                 }
@@ -117,8 +112,8 @@ namespace System.Diagnostics
         {
             get
             {
-                List<object?> list = new List<object?>(_list.Count);
-                foreach (KeyValuePair<string, object?> kvp in _list)
+                List<object?> list = new List<object?>(Count);
+                foreach (KeyValuePair<string, object?> kvp in this)
                 {
                     list.Add(kvp.Value);
                 }
@@ -134,7 +129,7 @@ namespace System.Diagnostics
         /// <summary>
         /// Gets the number of elements contained in the collection.
         /// </summary>
-        public int Count => _list.Count;
+        public int Count { get; private set; }
 
         /// <summary>
         /// Adds a tag with the provided key and value to the collection.
@@ -149,13 +144,27 @@ namespace System.Diagnostics
                 throw new ArgumentNullException(nameof(key));
             }
 
-            int index = FindIndex(key);
-            if (index >= 0)
+            DiagNode<KeyValuePair<string, object?>>? node = FindNode(key);
+            if (node != null)
             {
                 throw new InvalidOperationException(SR.Format(SR.KeyAlreadyExist, key));
             }
 
-            _list.Add(new KeyValuePair<string, object?>(key, value));
+            node = new DiagNode<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>(key, value));
+
+            if (_first == null)
+            {
+                _first = _last = node;
+            }
+            else
+            {
+                Debug.Assert(_last != null);
+
+                _last!.Next = node;
+                _last = node;
+            }
+
+            Count++;
         }
 
         /// <summary>
@@ -163,56 +172,70 @@ namespace System.Diagnostics
         /// </summary>
         /// <param name="item">Key and value pair of the tag to add to the collection.</param>
         public void Add(KeyValuePair<string, object?> item)
-        {
-            if (item.Key == null)
-            {
-                throw new ArgumentNullException(nameof(item));
-            }
-
-            int index = FindIndex(item.Key);
-            if (index >= 0)
-            {
-                throw new InvalidOperationException(SR.Format(SR.KeyAlreadyExist, item.Key));
-            }
-
-            _list.Add(item);
-        }
+            => Add(item.Key, item.Value);
 
         /// <summary>
         /// Removes all items from the collection.
         /// </summary>
-        public void Clear() => _list.Clear();
+        public void Clear()
+        {
+            _first = _last = null;
+            Count = 0;
+        }
 
-        public bool Contains(KeyValuePair<string, object?> item) => _list.Contains(item);
+        public bool Contains(KeyValuePair<string, object?> item)
+        {
+            DiagNode<KeyValuePair<string, object?>>? node = FindNode(item.Key);
+            return node != null && Equals(node.Value.Value, item.Value);
+        }
 
         /// <summary>
         /// Determines whether the collection contains an element with the specified key.
         /// </summary>
         /// <param name="key"></param>
         /// <returns>True if the collection contains tag with that key. False otherwise.</returns>
-        public bool ContainsKey(string key) => FindIndex(key) >= 0;
+        public bool ContainsKey(string key) => FindNode(key) != null;
 
         /// <summary>
         /// Copies the elements of the collection to an array, starting at a particular array index.
         /// </summary>
         /// <param name="array">The array that is the destination of the elements copied from collection.</param>
         /// <param name="arrayIndex">The zero-based index in array at which copying begins.</param>
-        public void CopyTo(KeyValuePair<string, object?>[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
+        public void CopyTo(KeyValuePair<string, object?>[] array, int arrayIndex)
+        {
+            if (array is null)
+            {
+                throw new ArgumentNullException(nameof(array));
+            }
+            if (arrayIndex < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+            }
+            if (Count > array.Length - arrayIndex)
+            {
+                throw new ArgumentException("TODO");
+            }
+
+            foreach (KeyValuePair<string, object?> item in this)
+            {
+                array[arrayIndex++] = item;
+            }
+        }
 
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
-        IEnumerator<KeyValuePair<string, object?>> IEnumerable<KeyValuePair<string, object?>>.GetEnumerator() => new Enumerator(_list);
+        IEnumerator<KeyValuePair<string, object?>> IEnumerable<KeyValuePair<string, object?>>.GetEnumerator() => new Enumerator(_first);
 
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
-        public Enumerator GetEnumerator() => new Enumerator(_list);
+        public Enumerator GetEnumerator() => new Enumerator(_first);
 
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
         /// </summary>
-        IEnumerator IEnumerable.GetEnumerator() => new Enumerator(_list);
+        IEnumerator IEnumerable.GetEnumerator() => new Enumerator(_first);
 
         /// <summary>
         /// Removes the tag with the specified key from the collection.
@@ -220,28 +243,15 @@ namespace System.Diagnostics
         /// <param name="key">The tag key</param>
         /// <returns>True if the item existed and removed. False otherwise.</returns>
         public bool Remove(string key)
-        {
-            if (key is null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
-
-            int index = FindIndex(key);
-            if (index >= 0)
-            {
-                _list.RemoveAt(index);
-                return true;
-            }
-
-            return false;
-        }
+            => Remove(key, null, matchValue: false);
 
         /// <summary>
         /// Removes the first occurrence of a specific item from the collection.
         /// </summary>
         /// <param name="item">The tag key value pair to remove.</param>
         /// <returns>True if item was successfully removed from the collection; otherwise, false. This method also returns false if item is not found in the original collection.</returns>
-        public bool Remove(KeyValuePair<string, object?> item) => _list.Remove(item);
+        public bool Remove(KeyValuePair<string, object?> item)
+            => Remove(item.Key, item.Value, matchValue: true);
 
         /// <summary>
         /// Gets the value associated with the specified key.
@@ -251,10 +261,10 @@ namespace System.Diagnostics
         /// <returns>When this method returns, the value associated with the specified key, if the key is found; otherwise, the default value for the type of the value parameter. This parameter is passed uninitialized.</returns>
         public bool TryGetValue(string key, out object? value)
         {
-            int index = FindIndex(key);
-            if (index >= 0)
+            DiagNode<KeyValuePair<string, object?>>? node = FindNode(key);
+            if (node != null)
             {
-                value = _list[index].Value;
+                value = node.Value.Value;
                 return true;
             }
 
@@ -262,29 +272,66 @@ namespace System.Diagnostics
             return false;
         }
 
-        /// <summary>
-        /// FindIndex finds the index of item in the list having a key matching the input key.
-        /// We didn't use List.FindIndex to avoid the extra allocation caused by the closure when calling the Predicate delegate.
-        /// </summary>
-        /// <param name="key">The key to search the item in the list</param>
-        /// <returns>The index of the found item, or -1 if the item not found.</returns>
-        private int FindIndex(string key)
+        private DiagNode<KeyValuePair<string, object?>>? FindNode(string key)
         {
-            for (int i = 0; i < _list.Count; i++)
+            DiagNode<KeyValuePair<string, object?>>? node = _first;
+            while (node != null)
             {
-                if (_list[i].Key == key)
+                if (node.Value.Key == key)
                 {
-                    return i;
+                    return node;
                 }
+
+                node = node.Next;
+            }
+            return null;
+        }
+
+        private bool Remove(string key, object? value, bool matchValue)
+        {
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
             }
 
-            return -1;
+            DiagNode<KeyValuePair<string, object?>>? previousNode = null;
+            DiagNode<KeyValuePair<string, object?>>? currentNode = _first;
+
+            while (currentNode != null)
+            {
+                if (currentNode.Value.Key == key
+                    && (!matchValue || Equals(currentNode.Value.Value, value)))
+                {
+                    if (previousNode == null)
+                    {
+                        _first = currentNode.Next;
+                    }
+                    else
+                    {
+                        previousNode.Next = currentNode.Next;
+                    }
+
+                    if (currentNode == _last)
+                    {
+                        _last = previousNode;
+                    }
+
+                    Count--;
+
+                    return true;
+                }
+
+                previousNode = currentNode;
+                currentNode = currentNode.Next;
+            }
+
+            return false;
         }
 
         public struct Enumerator : IEnumerator<KeyValuePair<string, object?>>, IEnumerator
         {
-            private List<KeyValuePair<string, object?>>.Enumerator _enumerator;
-            internal Enumerator(List<KeyValuePair<string, object?>> list) => _enumerator = list.GetEnumerator();
+            private DiagEnumerator<KeyValuePair<string, object?>> _enumerator;
+            internal Enumerator(DiagNode<KeyValuePair<string, object?>>? first) => _enumerator = new(first);
 
             public KeyValuePair<string, object?> Current => _enumerator.Current;
             object IEnumerator.Current => ((IEnumerator)_enumerator).Current;

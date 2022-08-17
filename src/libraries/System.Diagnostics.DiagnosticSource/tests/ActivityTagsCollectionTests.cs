@@ -145,17 +145,23 @@ namespace System.Diagnostics.Tests
         public void TestRemove()
         {
             ActivityTagsCollection tags = new ActivityTagsCollection(s_list);
+
+            Assert.Equal(4, tags.Count);
+
             Assert.True(tags.ContainsKey("Key1"));
             Assert.True(tags.Remove("Key1"));
+            Assert.Equal(3, tags.Count);
             Assert.False(tags.ContainsKey("Key1"));
 
             Assert.True(tags.ContainsKey("Key2"));
             Assert.True(tags.Remove(new KeyValuePair<string, object>("Key2", "Value2")));
+            Assert.Equal(2, tags.Count);
             Assert.False(tags.ContainsKey("Key2"));
 
             Assert.True(tags.Contains(new KeyValuePair<string, object>("Key3", 3)));
             Assert.False(tags.Remove(new KeyValuePair<string, object>("Key3", 4)));
             Assert.True(tags.Remove(new KeyValuePair<string, object>("Key3", 3)));
+            Assert.Equal(1, tags.Count);
         }
 
         [Fact]
