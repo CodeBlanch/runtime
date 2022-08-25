@@ -11,8 +11,8 @@ namespace System.Diagnostics
     /// </summary>
     public readonly struct ActivityEvent
     {
-        private static readonly IEnumerable<KeyValuePair<string, object?>> s_emptyTags = Array.Empty<KeyValuePair<string, object?>>();
-        private readonly ActivityTagsCollection? _tags;
+        private static readonly ActivityTagsCollection s_emptyTags = new ActivityTagsCollection();
+        private readonly ActivityTagsCollection _tags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActivityEvent"/> class.
@@ -33,7 +33,7 @@ namespace System.Diagnostics
             Name = name ?? string.Empty;
             Timestamp = timestamp != default ? timestamp : DateTimeOffset.UtcNow;
 
-            _tags = tags;
+            _tags = tags ?? s_emptyTags;
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace System.Diagnostics
         /// <summary>
         /// Gets the collection of tags associated with the event.
         /// </summary>
-        public IEnumerable<KeyValuePair<string, object?>> Tags => _tags ?? s_emptyTags;
+        public IEnumerable<KeyValuePair<string, object?>> Tags => _tags;
 
         /// <summary>
         /// Enumerate the tags attached to this <see cref="ActivityEvent"/> object.

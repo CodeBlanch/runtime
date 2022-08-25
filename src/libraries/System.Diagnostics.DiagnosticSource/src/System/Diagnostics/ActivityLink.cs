@@ -40,7 +40,7 @@ namespace System.Diagnostics
 
         public override bool Equals([NotNullWhen(true)] object? obj) => (obj is ActivityLink link) && this.Equals(link);
 
-        public bool Equals(ActivityLink value) => Context == value.Context && value.Tags == Tags;
+        public bool Equals(ActivityLink value) => Context == value.Context && value.Tags is null && _tags is null;
         public static bool operator ==(ActivityLink left, ActivityLink right) => left.Equals(right);
         public static bool operator !=(ActivityLink left, ActivityLink right) => !left.Equals(right);
 

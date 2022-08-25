@@ -2258,6 +2258,11 @@ namespace System.Diagnostics.Tests
         [Fact]
         public void ActivityLinkEqualityTest()
         {
+            ActivityLink link1 = default;
+            ActivityLink link2 = default;
+
+            Assert.Equal(link1, link2);
+
             ActivityTagsCollection tags = new()
             {
                 new KeyValuePair<string, object?>("key1", "value1"),
@@ -2265,10 +2270,10 @@ namespace System.Diagnostics.Tests
                 new KeyValuePair<string, object?>("key3", "value3"),
             };
 
-            ActivityLink link1 = new(default, tags);
-            ActivityLink link2 = new(default, tags);
+            ActivityLink linkWithTags1 = new(default, tags);
+            ActivityLink linkWithTags2 = new(default, tags);
 
-            Assert.Equal(link1, link2);
+            Assert.NotEqual(linkWithTags1, linkWithTags2);
         }
 
         public void Dispose()
