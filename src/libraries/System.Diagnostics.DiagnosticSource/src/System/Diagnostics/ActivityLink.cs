@@ -14,7 +14,7 @@ namespace System.Diagnostics
     /// </summary>
     public readonly partial struct ActivityLink : IEquatable<ActivityLink>
     {
-        private readonly Activity.TagsLinkedList? _tags;
+        private readonly ActivityTagsCollection? _tags;
 
         /// <summary>
         /// Construct a new <see cref="ActivityLink"/> object which can be linked to an Activity object.
@@ -25,7 +25,7 @@ namespace System.Diagnostics
         {
             Context = context;
 
-            _tags = tags?.Count > 0 ? new Activity.TagsLinkedList(tags) : null;
+            _tags = tags;
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace System.Diagnostics
 
         public override bool Equals([NotNullWhen(true)] object? obj) => (obj is ActivityLink link) && this.Equals(link);
 
-        public bool Equals(ActivityLink value) => Context == value.Context && value.Tags == Tags;
+        public bool Equals(ActivityLink value) => Context == value.Context && value._tags is null && _tags is null;
         public static bool operator ==(ActivityLink left, ActivityLink right) => left.Equals(right);
         public static bool operator !=(ActivityLink left, ActivityLink right) => !left.Equals(right);
 
@@ -48,6 +48,6 @@ namespace System.Diagnostics
         /// Enumerate the tags attached to this <see cref="ActivityLink"/> object.
         /// </summary>
         /// <returns><see cref="Activity.Enumerator{T}"/>.</returns>
-        public Activity.Enumerator<KeyValuePair<string, object?>> EnumerateTagObjects() => new Activity.Enumerator<KeyValuePair<string, object?>>(_tags?.First);
+        public Activity.Enumerator<KeyValuePair<string, object?>> EnumerateTagObjects() => new Activity.Enumerator<KeyValuePair<string, object?>>(_tags?.ToEnumerator());
     }
 }

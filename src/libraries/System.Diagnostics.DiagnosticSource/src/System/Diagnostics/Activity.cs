@@ -1388,6 +1388,12 @@ namespace System.Diagnostics
             private set => _state = (_state & ~State.FormatFlags) | (State)((byte)value & (byte)State.FormatFlags);
         }
 
+        internal interface IActivityEnumerator<T>
+        {
+            ref T Current { get; }
+            void MoveNext(ref IActivityEnumerator<T>? enumerator);
+        }
+
         /// <summary>
         /// Enumerates the data stored on an Activity object.
         /// </summary>
@@ -1396,13 +1402,12 @@ namespace System.Diagnostics
         {
             private static readonly DiagNode<T> s_Empty = new DiagNode<T>(default!);
 
-            private DiagNode<T>? _nextNode;
-            private DiagNode<T> _currentNode;
+            private IActivityEnumerator<T>? _next;
+            private IActivityEnumerator<T> _current = s_Empty;
 
-            internal Enumerator(DiagNode<T>? head)
+            internal Enumerator(IActivityEnumerator<T>? enumerator)
             {
-                _nextNode = head;
-                _currentNode = s_Empty;
+                _next = enumerator;
             }
 
             /// <summary>
@@ -1415,7 +1420,7 @@ namespace System.Diagnostics
             /// <summary>
             /// Gets the element at the current position of the enumerator.
             /// </summary>
-            public readonly ref T Current => ref _currentNode.Value;
+            public readonly ref T Current => ref _current.Current;
 
             /// <summary>
             /// Advances the enumerator to the next element of the data.
@@ -1425,15 +1430,16 @@ namespace System.Diagnostics
             /// collection.</returns>
             public bool MoveNext()
             {
-                if (_nextNode == null)
+                IActivityEnumerator<T>? current = _next;
+                if (current != null)
                 {
-                    _currentNode = s_Empty;
-                    return false;
+                    _current = current;
+                    current.MoveNext(ref _next!);
+                    return true;
                 }
 
-                _currentNode = _nextNode;
-                _nextNode = _nextNode.Next;
-                return true;
+                _current = s_Empty;
+                return false;
             }
         }
 

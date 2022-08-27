@@ -2187,6 +2187,13 @@ namespace System.Diagnostics.Tests
             Assert.False(enumerator.MoveNext());
             Assert.False(enumerator.GetEnumerator().MoveNext());
 
+            link = new(default, tags: new());
+
+            enumerator = link.EnumerateTagObjects();
+
+            Assert.False(enumerator.MoveNext());
+            Assert.False(enumerator.GetEnumerator().MoveNext());
+
             var tags = new List<KeyValuePair<string, object?>>()
             {
                 new KeyValuePair<string, object?>("tag1", "value1"),
@@ -2226,6 +2233,13 @@ namespace System.Diagnostics.Tests
             Assert.False(enumerator.MoveNext());
             Assert.False(enumerator.GetEnumerator().MoveNext());
 
+            e = new("testEvent", tags: new());
+
+            enumerator = e.EnumerateTagObjects();
+
+            Assert.False(enumerator.MoveNext());
+            Assert.False(enumerator.GetEnumerator().MoveNext());
+
             var tags = new List<KeyValuePair<string, object?>>()
             {
                 new KeyValuePair<string, object?>("tag1", "value1"),
@@ -2253,6 +2267,27 @@ namespace System.Diagnostics.Tests
                 Assert.Equal(values[0], tag);
                 values.RemoveAt(0);
             }
+        }
+
+        [Fact]
+        public void ActivityLinkEqualityTest()
+        {
+            ActivityLink link1 = default;
+            ActivityLink link2 = default;
+
+            Assert.Equal(link1, link2);
+
+            ActivityTagsCollection tags = new()
+            {
+                new KeyValuePair<string, object?>("key1", "value1"),
+                new KeyValuePair<string, object?>("key2", "value2"),
+                new KeyValuePair<string, object?>("key3", "value3"),
+            };
+
+            ActivityLink linkWithTags1 = new(default, tags);
+            ActivityLink linkWithTags2 = new(default, tags);
+
+            Assert.NotEqual(linkWithTags1, linkWithTags2);
         }
 
         public void Dispose()

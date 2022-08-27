@@ -6,11 +6,15 @@ using System.Collections.Generic;
 
 namespace System.Diagnostics
 {
-    internal sealed partial class DiagNode<T>
+    internal sealed partial class DiagNode<T> : Activity.IActivityEnumerator<T>
     {
         public DiagNode(T value) => Value = value;
         public T Value;
         public DiagNode<T>? Next;
+
+        ref T Activity.IActivityEnumerator<T>.Current => ref Value;
+        void Activity.IActivityEnumerator<T>.MoveNext(ref Activity.IActivityEnumerator<T>? enumerator)
+            => enumerator = Next;
     }
 
     // We are not using the public LinkedList<T> because we need to ensure thread safety operation on the list.

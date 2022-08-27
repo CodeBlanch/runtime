@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Collections;
-using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace System.Diagnostics
 {
@@ -21,7 +21,49 @@ namespace System.Diagnostics
     /// </summary>
     public class ActivityTagsCollection : IDictionary<string, object?>
     {
-        private List<KeyValuePair<string, object?>> _list = new List<KeyValuePair<string, object?>>();
+        private readonly ActivityTagsCollectionBacking<KeyValuePair<string, object?>> _list = new ActivityTagsCollectionBacking<KeyValuePair<string, object?>>();
+
+        private sealed class ActivityTagsCollectionBacking<T> : List<T>, Activity.IActivityEnumerator<T>
+        {
+            private T _currentItem = default!;
+            private int _enumerationIndex;
+
+            ref T Activity.IActivityEnumerator<T>.Current => ref _currentItem;
+
+            void Activity.IActivityEnumerator<T>.MoveNext(ref Activity.IActivityEnumerator<T>? enumerator)
+            {
+                int index = _enumerationIndex;
+                _currentItem = this[index];
+
+                if ((_enumerationIndex = index + 1) >= Count)
+                {
+                    enumerator = null;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void ResetEnumeration()
+            {
+                if (_enumerationIndex != 0)
+                {
+                    _enumerationIndex = 0;
+                    _currentItem = default!;
+                }
+            }
+        }
+
+        internal Activity.IActivityEnumerator<KeyValuePair<string, object?>>? ToEnumerator()
+        {
+            ActivityTagsCollectionBacking<KeyValuePair<string, object?>> enumerator = _list;
+
+            if (enumerator.Count > 0)
+            {
+                enumerator.ResetEnumeration();
+                return enumerator;
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// Create a new instance of the collection.
