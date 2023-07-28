@@ -115,16 +115,22 @@ namespace Microsoft.Extensions.Diagnostics.Metrics
             if (!enable && alreadyEnabled)
             {
                 _enabled.Remove(instrument);
-                _meterListener.DisableMeasurementEvents(instrument);
-                // TODO: State?
-                _metricsListener.MeasurementsCompleted(instrument, userState: null);
+
+                var state = _meterListener.DisableMeasurementEvents(instrument);
+                if (state != null)
+                {
+                    _metricsListener.MeasurementsCompleted(instrument, state);
+                }
             }
             else if (enable && !alreadyEnabled)
             {
-                _meterListener.EnableMeasurementEvents(instrument);
+                var state = _metricsListener.InstrumentPublished(instrument);
+                if (state != null)
+                {
+                    _meterListener.EnableMeasurementEvents(instrument, state);
+                }
+
                 _enabled.Add(instrument);
-                // TODO: should this returned state flow somewhere?
-                _metricsListener.InstrumentPublished(instrument);
             }
         }
 
