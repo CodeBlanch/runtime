@@ -75,7 +75,7 @@ namespace System
             return result;
         }
 
-        public static int Combine<T1>(T1 value1)
+        public static int Combine<T1>(T1? value1)
         {
             // Provide a way of diffusing bits from something with a limited
             // input hash space. For example, many enums only have a few
@@ -95,7 +95,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2>(T1 value1, T2 value2)
+        public static int Combine<T1, T2>(T1? value1, T2? value2)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -110,7 +110,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2, T3>(T1 value1, T2 value2, T3 value3)
+        public static int Combine<T1, T2, T3>(T1? value1, T2? value2, T3? value3)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -127,7 +127,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2, T3, T4>(T1 value1, T2 value2, T3 value3, T4 value4)
+        public static int Combine<T1, T2, T3, T4>(T1? value1, T2? value2, T3? value3, T4? value4)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -148,7 +148,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2, T3, T4, T5>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5)
+        public static int Combine<T1, T2, T3, T4, T5>(T1? value1, T2? value2, T3? value3, T4? value4, T5? value5)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -172,7 +172,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2, T3, T4, T5, T6>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6)
+        public static int Combine<T1, T2, T3, T4, T5, T6>(T1? value1, T2? value2, T3? value3, T4? value4, T5? value5, T6? value6)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -198,7 +198,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2, T3, T4, T5, T6, T7>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7)
+        public static int Combine<T1, T2, T3, T4, T5, T6, T7>(T1? value1, T2? value2, T3? value3, T4? value4, T5? value5, T6? value6, T7? value7)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -226,7 +226,7 @@ namespace System
             return (int)hash;
         }
 
-        public static int Combine<T1, T2, T3, T4, T5, T6, T7, T8>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8)
+        public static int Combine<T1, T2, T3, T4, T5, T6, T7, T8>(T1? value1, T2? value2, T3? value3, T4? value4, T5? value5, T6? value6, T7? value7, T8? value8)
         {
             uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
             uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
@@ -299,12 +299,12 @@ namespace System
             return hash;
         }
 
-        public void Add<T>(T value)
+        public void Add<T>(T? value)
         {
             Add(value?.GetHashCode() ?? 0);
         }
 
-        public void Add<T>(T value, IEqualityComparer<T>? comparer)
+        public void Add<T>(T? value, IEqualityComparer<T>? comparer)
         {
             Add(value is null ? 0 : (comparer?.GetHashCode(value) ?? value.GetHashCode()));
         }
