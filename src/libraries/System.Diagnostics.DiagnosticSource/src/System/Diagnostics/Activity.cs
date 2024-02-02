@@ -222,15 +222,8 @@ namespace System.Diagnostics
                 // We can do this concatenation with a stackalloced Span<char> if we actually used Id a lot.
                 if (_id == null && _spanId != null)
                 {
-                    // Convert flags to binary.
-                    Span<char> flagsChars = stackalloc char[2];
-                    HexConverter.ToCharsBuffer((byte)((~ActivityTraceFlagsIsSet) & _w3CIdFlags), flagsChars, 0, HexConverter.Casing.Lower);
-                    string id =
-#if NET6_0_OR_GREATER
-                        string.Create(null, stackalloc char[128], $"00-{_traceId}-{_spanId}-{flagsChars}");
-#else
-                        "00-" + _traceId + "-" + _spanId + "-" + flagsChars.ToString();
-#endif
+                    string id = GenerateW3CTraceParent(Context);
+
                     Interlocked.CompareExchange(ref _id, id, null);
 
                 }
@@ -255,14 +248,8 @@ namespace System.Diagnostics
                 {
                     if (_parentSpanId != null)
                     {
-                        Span<char> flagsChars = stackalloc char[2];
-                        HexConverter.ToCharsBuffer((byte)((~ActivityTraceFlagsIsSet) & _parentTraceFlags), flagsChars, 0, HexConverter.Casing.Lower);
-                        string parentId =
-#if NET6_0_OR_GREATER
-                            string.Create(null, stackalloc char[128], $"00-{_traceId}-{_parentSpanId}-{flagsChars}");
-#else
-                            "00-" + _traceId + "-" + _parentSpanId + "-" + flagsChars.ToString();
-#endif
+                        string parentId = GenerateW3CTraceParent(new ActivityContext(TraceId, ParentSpanId, (ActivityTraceFlags)_parentTraceFlags));
+
                         Interlocked.CompareExchange(ref _parentId, parentId, null);
                     }
                     else if (Parent != null)
@@ -1151,6 +1138,35 @@ namespace System.Diagnostics
             }
 
             return activity;
+        }
+
+        internal static string GenerateW3CTraceParent(ActivityContext context)
+        {
+#if NET6_0_OR_GREATER
+            return string.Create(55, context, WriteTraceParentIntoSpan);
+
+            static void WriteTraceParentIntoSpan(Span<char> destination, ActivityContext context)
+            {
+                "00-".CopyTo(destination);
+                context.TraceId.ToHexString().CopyTo(destination.Slice(3));
+                destination[35] = '-';
+                context.SpanId.ToHexString().CopyTo(destination.Slice(36));
+                if ((context.TraceFlags & ActivityTraceFlags.Recorded) != 0)
+                {
+                    "-01".CopyTo(destination.Slice(52));
+                }
+                else
+                {
+                    "-00".CopyTo(destination.Slice(52));
+                }
+            }
+#else
+            return "00-"
+                + context.TraceId.ToHexString()
+                + "-"
+                + context.SpanId.ToHexString()
+                + (((context.TraceFlags & ActivityTraceFlags.Recorded) != 0) ? "-01" : "-00");
+#endif
         }
 
         /// <summary>

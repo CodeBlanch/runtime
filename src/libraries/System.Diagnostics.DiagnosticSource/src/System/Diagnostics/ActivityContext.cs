@@ -12,6 +12,8 @@ namespace System.Diagnostics
     /// </summary>
     public readonly partial struct ActivityContext : IEquatable<ActivityContext>
     {
+        private readonly Activity? _activity;
+
         /// <summary>
         /// Construct a new object of ActivityContext.
         /// </summary>
@@ -24,7 +26,13 @@ namespace System.Diagnostics
         /// isRemote is not a part of W3C specification. It is needed for the OpenTelemetry scenarios.
         /// </remarks>
         public ActivityContext(ActivityTraceId traceId, ActivitySpanId spanId, ActivityTraceFlags traceFlags, string? traceState = null, bool isRemote = false)
+            : this(traceId, spanId, traceFlags, traceState, isRemote, activity: null)
         {
+        }
+
+        internal ActivityContext(ActivityTraceId traceId, ActivitySpanId spanId, ActivityTraceFlags traceFlags, string? traceState, bool isRemote, Activity? activity)
+        {
+            _activity = activity;
             TraceId = traceId;
             SpanId = spanId;
             TraceFlags = traceFlags;
@@ -59,6 +67,24 @@ namespace System.Diagnostics
         /// IsRemote is not a part of W3C specification. It is needed for the OpenTelemetry scenarios.
         /// </remarks>
         public bool IsRemote { get; }
+
+        /// <summary>
+        /// Gets the ID for the <see cref="ActivityContext" /> in the W3C TraceParent format.
+        /// </summary>
+        public string Id
+        {
+            get
+            {
+                if (_activity != null
+                    // Note: TraceFlags on Activity are mutable where ActivityContext is not.
+                    && _activity.ActivityTraceFlags == TraceFlags)
+                {
+                    return _activity.Id!;
+                }
+
+                return Activity.GenerateW3CTraceParent(this);
+            }
+        }
 
         /// <summary>
         /// Parse W3C trace context headers to ActivityContext object.
