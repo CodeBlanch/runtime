@@ -76,6 +76,7 @@ namespace System.Diagnostics
             get
             {
                 if (_activity != null
+                    && _activity.IdFormat == ActivityIdFormat.W3C
                     // Note: TraceFlags on Activity are mutable where ActivityContext is not.
                     && _activity.ActivityTraceFlags == TraceFlags)
                 {
